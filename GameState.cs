@@ -17,6 +17,8 @@ public class GameState
     public Snake PlayerSnake { get; set; }
     public int FieldWidth { get; private set; }
     public int FieldHeight { get; private set; }
+    public List<Point> Food { get; private set; }
+    public int Score { get; private set; }
 
     public bool ShouldEndGame
     {
@@ -37,8 +39,11 @@ public class GameState
         PlayerSnake = new Snake();
         PlayerSnake.CurrentDirection = Direction.Right;
         PlayerSnake.NextDirection = Direction.Right;
+        Food = new List<Point>();
+        Score = 0;
 
         InitialSnake();
+        GenerateFood(3);
     }
 
     private void InitialSnake()
@@ -49,6 +54,47 @@ public class GameState
         {
             PlayerSnake.Body.Add(new Point(startX - i, startY));
         }
+    }
+
+    public void GenerateFood(int amount)
+    {
+        for (int i = 0; i < amount; i++)
+        {
+            Point? foodPosition = FindValidFoodPosition();
+            if (foodPosition != null)
+            {
+                Food.Add(foodPosition);
+            }
+        }
+    }
+
+    private Point? FindValidFoodPosition()
+    {
+        Random random = new();
+        int attempts = 0;
+        while (attempts < 100)
+        {
+            Point candidate = new Point(random.Next(1, FieldWidth - 1), random.Next(1, FieldHeight - 1));
+            if (!PlayerSnake.Body.Contains(candidate) && !Food.Contains(candidate))
+                return candidate;
+            attempts++;
+        }
+
+        return null;
+    }
+
+    public bool TryEatFood(Point position)
+    {
+        var foodToEat = Food.FirstOrDefault(p => p.X == position.X && p.Y == position.Y);
+
+        if (foodToEat != null)
+        {
+            Food.Remove(foodToEat);
+            Score++;
+            return true;
+        }
+        return false;
+        
     }
 }
 
@@ -65,7 +111,9 @@ public class Point
 
     public override bool Equals(object? obj)
     {
-        return obj is Point && X == ((Point)obj).X && Y == ((Point)obj).Y;
+        if (obj is null || !(obj is Point)) 
+            return false;
+        return X == ((Point)obj).X && Y == ((Point)obj).Y;
     }
 
     public override int GetHashCode()
@@ -73,14 +121,18 @@ public class Point
         return HashCode.Combine(X, Y);
     }
 
-    public static bool operator ==(Point a, Point b)
+    public static bool operator ==(Point? a, Point? b)
     {
-        return a.Equals(b);
+        if (a is null)
+            return b is null;
+        if (b is null)
+            return false;
+        return a.X == b.X && a.Y == b.Y;
     }
 
-    public static bool operator !=(Point a, Point b)
+    public static bool operator !=(Point? a, Point? b)
     {
-        return !a.Equals(b);
+        return !(a == b);
     }
 }
 

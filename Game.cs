@@ -28,7 +28,7 @@ public class Game
         _inputThread.Join();
         
         Console.Clear();
-        Console.WriteLine("Game Over");
+        Console.WriteLine($"Game Over! Your score: {_gameState.Score}");
         Thread.Sleep(1000);
     }
 
@@ -124,7 +124,15 @@ public class Game
             return;
         }
         
-        _gameState.PlayerSnake.Body.Insert(0, newHead); 
-        _gameState.PlayerSnake.Body.RemoveAt(_gameState.PlayerSnake.Body.Count - 1);
+        bool ateFood = _gameState.TryEatFood(newHead);
+        _gameState.PlayerSnake.Body.Insert(0, newHead);
+        if (!ateFood)
+        {
+            _gameState.PlayerSnake.Body.RemoveAt(_gameState.PlayerSnake.Body.Count - 1);
+        }
+        else
+        {
+            _gameState.GenerateFood(1);
+        }
     }
 }

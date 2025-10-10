@@ -23,6 +23,7 @@ public class GameRenderer
         Console.Clear();
         DrawBorders();
         DrawSnake();
+        DrawFood();
         DrawInfo();
     }
     private void DrawBorders()
@@ -83,6 +84,14 @@ public class GameRenderer
             Direction.Down => '▼',
             _ => '●'
         };
+    }
+
+    private void DrawFood()
+    {
+        foreach (var food in _gameState.Food)
+        {
+            DrawPixel(food.X, food.Y, ConsoleColor.Red, '♦');
+        }
     }
     
     private void DrawPixel(int x, int y, ConsoleColor color, char symbol)
