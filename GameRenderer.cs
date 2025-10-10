@@ -50,8 +50,10 @@ public class GameRenderer
     {
         string info = "Snake game | ESC to exit | Movement - arrows/WASD";
         string snakeInfo = $"Length: {_gameState.PlayerSnake.Body.Count} | Direction: {_gameState.PlayerSnake.CurrentDirection}";
+        string gameInfo = $"Score: {_gameState.Score} | Speed: {GetSpeedDesription()}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
         int snakeInfoX = Math.Max(0, (_gameState.FieldWidth - snakeInfo.Length) / 2);
+        int gameInfoX = Math.Max(0, (_gameState.FieldWidth - gameInfo.Length) / 2);
         for (int i = 0; i < info.Length && infoX + i < _gameState.FieldWidth; i++)
         {
             DrawPixel(infoX + i, _gameState.FieldHeight + 1, ConsoleColor.Gray, info[i]);
@@ -61,6 +63,30 @@ public class GameRenderer
         {
             DrawPixel(snakeInfoX + i, _gameState.FieldHeight + 2, ConsoleColor.Yellow, snakeInfo[i]);
         }
+        
+        for (int i = 0; i < gameInfo.Length && gameInfoX + i < _gameState.FieldWidth; i++)
+        {
+            DrawPixel(gameInfoX + i, _gameState.FieldHeight + 3, ConsoleColor.Cyan, gameInfo[i]);
+        }
+    }
+
+    private string GetSpeedDesription()
+    {
+        int snakeLength = _gameState.PlayerSnake.Body.Count;
+        if (snakeLength <= 10)
+        {
+            return "Slow";
+        }
+        else if (snakeLength <= 20)
+        {
+            return "Medium";
+        }
+        else if (snakeLength <= 30)
+        {
+            return "Fast";
+        }
+
+        return "Very Fast";
     }
 
     private void DrawSnake()

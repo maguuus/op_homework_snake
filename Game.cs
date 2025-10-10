@@ -83,9 +83,24 @@ public class Game
             UpdateGame();
             _renderer.Render();
             TimeSpan frameTime = DateTime.Now - frameStart;
-            int sleep = Math.Max(0, 600 - (int)frameTime.TotalMilliseconds);
+            int sleepTime = CalculateSleepTime();
+            int sleep = Math.Max(0, sleepTime - (int)frameTime.TotalMilliseconds);
             Thread.Sleep(sleep);
         }
+    }
+
+    public int CalculateSleepTime()
+    {
+        int snakeLength = _gameState.PlayerSnake.Body.Count;
+        if (snakeLength < 10)
+        {
+            return 600;
+        }
+        else if (snakeLength > 30)
+        {
+            return 300;
+        }
+        return 750 - snakeLength * 15;
     }
     
     private void UpdateGame()
