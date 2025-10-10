@@ -4,6 +4,7 @@ public class Game
 {
     private GameState _gameState;
     private GameRenderer _renderer;
+    private Thread? _inputThread;
     private bool _isRunning;
 
     public Game()
@@ -18,19 +19,14 @@ public class Game
 
         Console.Clear();
         _renderer.RenderInitialScreen();
-        while (_isRunning)
-        {
-            DateTime frameStart = DateTime.Now;
-            
-            HandleInput();
-            UpdateGame();
-            _renderer.Render();
 
-            TimeSpan frameTime = DateTime.Now - frameStart;
-            int sleep = Math.Max(0, 600 - (int)frameTime.TotalMilliseconds);
-            Thread.Sleep(sleep);
-        }
+        _inputThread = new Thread(HandleInput);
+        _inputThread.Start();
 
+        GameLoop();
+        
+        _inputThread.Join();
+        
         Console.Clear();
         Console.WriteLine("Game Over");
         Thread.Sleep(1000);
@@ -38,47 +34,68 @@ public class Game
 
     private void HandleInput()
     {
-        if (Console.KeyAvailable)
+        while (_isRunning && !_gameState.ShouldEndGame)
         {
-            var key = Console.ReadKey(intercept: true);
-            switch (key.Key)
+            if (Console.KeyAvailable)
             {
-                case ConsoleKey.UpArrow:
-                case ConsoleKey.W:
-                    if (_gameState.Snake.CurrentDirection != Direction.Down)
-                        _gameState.Snake.NextDirection = Direction.Up;
-                    break;
-                case ConsoleKey.DownArrow:
-                case ConsoleKey.S:
-                    if (_gameState.Snake.CurrentDirection != Direction.Up)
-                        _gameState.Snake.NextDirection = Direction.Down;
-                    break;
-                case ConsoleKey.LeftArrow:
-                case ConsoleKey.A:
-                    if (_gameState.Snake.CurrentDirection != Direction.Right)
-                        _gameState.Snake.NextDirection = Direction.Left;
-                    break;
-                case ConsoleKey.RightArrow:
-                case ConsoleKey.D:
-                    if (_gameState.Snake.CurrentDirection != Direction.Left)
-                        _gameState.Snake.NextDirection = Direction.Right;
-                    break;
-                case ConsoleKey.Escape:
-                    _isRunning = false;
-                    break;
+                var key = Console.ReadKey(intercept: true);
+                Direction newDirection = _gameState.PlayerSnake.NextDirection;
+                switch (key.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                    case ConsoleKey.W:
+                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Up))
+                            newDirection = Direction.Up;
+                        break;
+                    case ConsoleKey.DownArrow:
+                    case ConsoleKey.S:
+                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Down))
+                            newDirection = Direction.Down;
+                        break;
+                    case ConsoleKey.LeftArrow:
+                    case ConsoleKey.A:
+                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Left))
+                            newDirection = Direction.Left;
+                        break;
+                    case ConsoleKey.RightArrow:
+                    case ConsoleKey.D:
+                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Right))
+                            newDirection = Direction.Right;
+                        break;
+                    case ConsoleKey.Escape:
+                        _gameState.ShouldEndGame = true;
+                        _isRunning = false;
+                        break;
+                }
+                
+                _gameState.PlayerSnake.NextDirection = newDirection;
             }
+            
+            Thread.Sleep(10);
         }
     }
 
-
+    private void GameLoop()
+    {
+        while (_isRunning && !_gameState.ShouldEndGame)
+        {
+            DateTime frameStart = DateTime.Now;
+            UpdateGame();
+            _renderer.Render();
+            TimeSpan frameTime = DateTime.Now - frameStart;
+            int sleep = Math.Max(0, 600 - (int)frameTime.TotalMilliseconds);
+            Thread.Sleep(sleep);
+        }
+    }
+    
     private void UpdateGame()
     {
-        _gameState.Snake.CurrentDirection = _gameState.Snake.NextDirection;
+        _gameState.PlayerSnake.UpdateDirection();
 
-        var head = _gameState.Snake.Body[0];
+        var head = _gameState.PlayerSnake.Body[0];
         Point newHead = head;
 
-        switch (_gameState.Snake.CurrentDirection)
+        switch (_gameState.PlayerSnake.CurrentDirection)
         {
             case Direction.Up:
                 newHead = new Point(head.X, head.Y - 1);
@@ -101,13 +118,13 @@ public class Game
             return;
         }
 
-        if (_gameState.Snake.Body.Skip(1).Any(segment => segment == newHead))
+        if (_gameState.PlayerSnake.Body.Skip(1).Any(segment => segment == newHead))
         {
             _isRunning = false;
             return;
         }
         
-        _gameState.Snake.Body.Insert(0, newHead); 
-        _gameState.Snake.Body.RemoveAt(_gameState.Snake.Body.Count - 1);
+        _gameState.PlayerSnake.Body.Insert(0, newHead); 
+        _gameState.PlayerSnake.Body.RemoveAt(_gameState.PlayerSnake.Body.Count - 1);
     }
 }

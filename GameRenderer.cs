@@ -48,7 +48,7 @@ public class GameRenderer
     private void DrawInfo()
     {
         string info = "Snake game | ESC to exit | Movement - arrows/WASD";
-        string snakeInfo = $"Length: {_gameState.Snake.Body.Count} | Direction: {_gameState.Snake.CurrentDirection}";
+        string snakeInfo = $"Length: {_gameState.PlayerSnake.Body.Count} | Direction: {_gameState.PlayerSnake.CurrentDirection}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
         int snakeInfoX = Math.Max(0, (_gameState.FieldWidth - snakeInfo.Length) / 2);
         for (int i = 0; i < info.Length && infoX + i < _gameState.FieldWidth; i++)
@@ -64,9 +64,9 @@ public class GameRenderer
 
     private void DrawSnake()
     {
-        for (int i = 0; i < _gameState.Snake.Body.Count; i++)
+        for (int i = 0; i < _gameState.PlayerSnake.Body.Count; i++)
         {
-            var segment = _gameState.Snake.Body[i];
+            var segment = _gameState.PlayerSnake.Body[i];
             char symbol = (i == 0) ? GetHeadSymbol() : '●';
             ConsoleColor color = (i == 0) ? ConsoleColor.Green : ConsoleColor.DarkGreen;
             DrawPixel(segment.X, segment.Y, color, symbol);
@@ -75,7 +75,7 @@ public class GameRenderer
 
     private char GetHeadSymbol()
     {
-        return _gameState.Snake.CurrentDirection switch
+        return _gameState.PlayerSnake.CurrentDirection switch
         {
             Direction.Up => '▲',
             Direction.Right => '►',
