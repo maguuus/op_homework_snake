@@ -64,8 +64,8 @@ namespace SnakeGame
             Console.Title = "Snake Game";
             try
             {
-                Game game = new Game();
-                game.Start();
+                Menu menu = new Menu();
+                menu.Start();
             }
             catch (Exception ex)
             {

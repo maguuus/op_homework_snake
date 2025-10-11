@@ -6,12 +6,19 @@ public class Game
     private GameRenderer _renderer;
     private Thread? _inputThread;
     private bool _isRunning;
-
-    public Game()
+    public readonly HighscoreManager _highscoreManager;
+    public readonly Menu _menu;
+    public Game(HighscoreManager highscoreManager)
     {
         _gameState = new GameState();
         _renderer = new GameRenderer(_gameState);
+        _highscoreManager = highscoreManager;
+        _menu = new Menu();
     }
+
+    // public Game() : this(new HighscoreManager())
+    // {
+    // }
 
     public void Start()
     {
@@ -26,10 +33,51 @@ public class Game
         GameLoop();
         
         _inputThread.Join();
-        
+        CheckHighscore();
+        ShowGameOverScreen();
+        // Console.Clear();
+        // Console.WriteLine($"Game Over! Your score: {_gameState.Score}");
+        // Thread.Sleep(1000);
+    }
+
+    private void CheckHighscore()
+    {
+        int finalScore = _gameState.Score;
+        int finalLength = _gameState.PlayerSnake.Body.Count;
+        if (_highscoreManager.IsHighscore(finalScore))
+        {
+            string? playerName = _menu.GetPlayerName(finalScore, finalLength);
+            if (playerName != null)
+            {
+                _highscoreManager.AddScore(playerName, finalScore, finalLength);
+            }
+            
+        }
+    }
+
+    private void ShowGameOverScreen()
+    {
         Console.Clear();
-        Console.WriteLine($"Game Over! Your score: {_gameState.Score}");
-        Thread.Sleep(1000);
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine("GAME OVER");
+        Console.ResetColor();
+        Console.WriteLine($"Final score: {_gameState.Score}");
+        Console.WriteLine($"Final length: {_gameState.PlayerSnake.Body.Count}");
+        Console.WriteLine();
+        if (_highscoreManager.IsHighscore(_gameState.Score))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("NEW HIGHSCORE!");
+            Console.ResetColor();
+        }
+        else
+        {
+            int minTopScore = _highscoreManager.GetMinimumTopScore();
+            Console.WriteLine($"Top 10 minimum: {minTopScore} points");
+        }
+        Console.WriteLine();
+        Console.WriteLine("Press any key to return to menu...");
+        Console.ReadKey(true);
     }
 
     private void HandleInput()

@@ -48,7 +48,7 @@ public class GameRenderer
 
     private void DrawInfo()
     {
-        string info = "Snake game | ESC to exit | Movement - arrows/WASD";
+        string info = "Snake game | ESC to exit | Movement - ↑↓→← arrows/WASD";
         string snakeInfo = $"Length: {_gameState.PlayerSnake.Body.Count} | Direction: {_gameState.PlayerSnake.CurrentDirection}";
         string gameInfo = $"Score: {_gameState.Score} | Speed: {GetSpeedDesription()}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
