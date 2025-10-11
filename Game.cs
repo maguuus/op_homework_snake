@@ -139,7 +139,10 @@ public class Game
 
     public int CalculateSleepTime()
     {
-        int snakeLength = _gameState.PlayerSnake.Body.Count;
+        var playerSnake = _gameState.PlayerSnake;
+        if (playerSnake == null) return 600;
+        
+        int snakeLength = playerSnake.Body.Count;
         if (snakeLength < 10)
         {
             return 600;
@@ -153,49 +156,54 @@ public class Game
     
     private void UpdateGame()
     {
-        _gameState.PlayerSnake.UpdateDirection();
-
-        var head = _gameState.PlayerSnake.Body[0];
-        Point newHead = head;
-
-        switch (_gameState.PlayerSnake.CurrentDirection)
+        _gameState.PlayerSnake?.UpdateDirection();
+        foreach (var snake in _gameState.Snakes)
         {
-            case Direction.Up:
-                newHead = new Point(head.X, head.Y - 1);
-                break;
-            case Direction.Down:
-                newHead = new Point(head.X, head.Y + 1);
-                break;
-            case Direction.Left:
-                newHead = new Point(head.X - 1, head.Y);
-                break;
-            case Direction.Right:
-                newHead = new Point(head.X + 1, head.Y);
-                break;
-        }
+            if (snake.Body.Count == 0) continue;
+            var head = snake.Body[0];
+            Point newHead = head;
 
-        if (newHead.X <= 0 || newHead.X >= _gameState.FieldWidth - 1 ||
-            newHead.Y <= 0 || newHead.Y >= _gameState.FieldHeight - 1)
-        {
-            _isRunning = false;
-            return;
-        }
+            switch (snake.CurrentDirection)
+            {
+                case Direction.Up:
+                    newHead = new Point(head.X, head.Y - 1);
+                    break;
+                case Direction.Down:
+                    newHead = new Point(head.X, head.Y + 1);
+                    break;
+                case Direction.Left:
+                    newHead = new Point(head.X - 1, head.Y);
+                    break;
+                case Direction.Right:
+                    newHead = new Point(head.X + 1, head.Y);
+                    break;
+            }
 
-        if (_gameState.PlayerSnake.Body.Skip(1).Any(segment => segment == newHead))
-        {
-            _isRunning = false;
-            return;
-        }
+            if (newHead.X <= 0 || newHead.X >= _gameState.FieldWidth - 1 ||
+                newHead.Y <= 0 || newHead.Y >= _gameState.FieldHeight - 1)
+            {
+                _isRunning = false;
+                return;
+            }
+            bool selfCollision = snake.Body.Skip(1).Any(segment => segment == newHead);
+            bool otherSnakesCollision = _gameState.Snakes.Where(s => s != snake).Any(other => other.Body.Any(segment => segment == newHead));
+            if (selfCollision || otherSnakesCollision)
+            {
+                _isRunning = false;
+                return;
+            }
         
-        bool ateFood = _gameState.TryEatFood(newHead);
-        _gameState.PlayerSnake.Body.Insert(0, newHead);
-        if (!ateFood)
-        {
-            _gameState.PlayerSnake.Body.RemoveAt(_gameState.PlayerSnake.Body.Count - 1);
+            bool ateFood = _gameState.TryEatFood(newHead);
+            snake.Body.Insert(0, newHead);
+            if (!ateFood)
+            {
+                snake.Body.RemoveAt(snake.Body.Count - 1);
+            }
+            else
+            {
+                _gameState.GenerateFood(1);
+            } 
         }
-        else
-        {
-            _gameState.GenerateFood(1);
-        }
+
     }
 }

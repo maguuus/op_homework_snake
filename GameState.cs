@@ -13,12 +13,22 @@ public class GameState
 {
     private readonly System.Threading.Lock _gameStateLock = new();
     private bool _shouldExit = false;
-    
-    public Snake PlayerSnake { get; set; }
+    public List<Snake> Snakes { get; private set;  }
+    public List<Food> Food { get; private set; }
     public int FieldWidth { get; private set; }
     public int FieldHeight { get; private set; }
-    public List<Point> Food { get; private set; }
     public int Score { get; private set; }
+
+    public Snake PlayerSnake
+    {
+        get
+        {
+            lock (_gameStateLock)
+            {
+                return Snakes?.FirstOrDefault(s => s.IsPlayer);
+            }
+        }
+    }
 
     public bool ShouldEndGame
     {
@@ -36,25 +46,28 @@ public class GameState
     {
         FieldWidth = Math.Max(10, Console.WindowWidth - 10);
         FieldHeight = Math.Max(10, Console.WindowHeight - 5);
-        PlayerSnake = new Snake();
-        PlayerSnake.CurrentDirection = Direction.Right;
-        PlayerSnake.NextDirection = Direction.Right;
-        Food = new List<Point>();
+        Snakes = new List<Snake>();
+        Food = new List<Food>();
         Score = 0;
-
-        InitialSnake();
-        GenerateFood(3);
+        InitializeGame();
     }
 
-    private void InitialSnake()
+    private void InitializeGame()
     {
+        var playerSnake = new Snake(isPlayer: true);
+        playerSnake.CurrentDirection = Direction.Right;
+        playerSnake.NextDirection = Direction.Right;
         int startX = FieldWidth / 2;
         int startY = FieldHeight / 2;
         for (int i = 0; i < 5; i++)
         {
-            PlayerSnake.Body.Add(new Point(startX - i, startY));
+            playerSnake.Body.Add(new Point(startX - i, startY));
         }
+        Snakes.Add(playerSnake);
+        GenerateFood(3);
     }
+
+
 
     public void GenerateFood(int amount)
     {
@@ -63,7 +76,7 @@ public class GameState
             Point? foodPosition = FindValidFoodPosition();
             if (foodPosition != null)
             {
-                Food.Add(foodPosition);
+                Food.Add(new Food(foodPosition));
             }
         }
     }
@@ -75,7 +88,8 @@ public class GameState
         while (attempts < 100)
         {
             Point candidate = new Point(random.Next(1, FieldWidth - 1), random.Next(1, FieldHeight - 1));
-            if (!PlayerSnake.Body.Contains(candidate) && !Food.Contains(candidate))
+            bool collision = Snakes.Any(snake => snake.Body.Contains(candidate)) || Food.Any(f => f.Position == candidate);
+            if (!collision)
                 return candidate;
             attempts++;
         }
@@ -85,7 +99,7 @@ public class GameState
 
     public bool TryEatFood(Point position)
     {
-        var foodToEat = Food.FirstOrDefault(p => p.X == position.X && p.Y == position.Y);
+        var foodToEat = Food.FirstOrDefault(f => f.Position == position);
 
         if (foodToEat != null)
         {
@@ -98,6 +112,23 @@ public class GameState
     }
 }
 
+public class Food
+{
+    public Point Position { get; }
+    public FoodType Type { get; } = FoodType.Normal;
+
+    public Food(Point position, FoodType type = FoodType.Normal)
+    {
+        Position = position;
+        Type = type;
+    }
+}
+
+public enum FoodType
+{
+    Normal,
+    Bonus
+}
 public class Point
 {
     public int X { get; }
@@ -143,6 +174,14 @@ public class Snake
     private Direction _nextDirection;
     
     public List<Point> Body { get; set; } = new List<Point>();
+    public bool IsPlayer { get; }
+    public ConsoleColor Color { get; set; }
+
+    public Snake(bool isPlayer = false)
+    {
+        IsPlayer = isPlayer;
+        Color = isPlayer ? ConsoleColor.Green : ConsoleColor.Blue;
+    }
 
     public Direction CurrentDirection
     {
