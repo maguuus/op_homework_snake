@@ -84,7 +84,7 @@ public class Game
                 var key = Console.ReadKey(intercept: true);
                 ProcessKeyPress(key.Key);
             }
-            Thread.Sleep(10);
+            Thread.Sleep(GameConfig.InputPollingInterval);
         }
     }
 
@@ -122,7 +122,7 @@ public class Game
 
     private void ProcessInputCommands()
     {
-        var commands = _gameState.WaitForCommands(16);
+        var commands = _gameState.WaitForCommands(GameConfig.CommandProcessingTimeout);
         var commandsByPlayer = commands.GroupBy(c => c.PlayerId);
 
         foreach (var playerCommands in commandsByPlayer)
@@ -190,18 +190,18 @@ public class Game
     public int CalculateSleepTime()
     {
         var playerSnake = _gameState.PlayerSnake;
-        if (playerSnake == null) return 600;
+        if (playerSnake == null) return GameConfig.MinSpeed;
         
         int snakeLength = playerSnake.Body.Count;
         if (snakeLength < 10)
         {
-            return 600;
+            return GameConfig.MinSpeed;
         }
         else if (snakeLength > 30)
         {
-            return 300;
+            return GameConfig.MaxSpeed;
         }
-        return 750 - snakeLength * 15;
+        return GameConfig.MinSpeed - (snakeLength - 10) * (GameConfig.MinSpeed - GameConfig.MaxSpeed) / 20;
     }
     
     private void UpdateGame()

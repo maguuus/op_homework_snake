@@ -38,8 +38,8 @@ public class GameState
     
     public GameState()
     {
-        FieldWidth = Math.Max(10, Console.WindowWidth - 10);
-        FieldHeight = Math.Max(10, Console.WindowHeight - 5);
+        FieldWidth = Math.Max(GameConfig.MinFieldWidth, Console.WindowWidth - GameConfig.FieldWidthBuffer);
+        FieldHeight = Math.Max(GameConfig.MinFieldHeight, Console.WindowHeight - GameConfig.FieldHeightBuffer);
         Snakes = new List<Snake>();
         Food = new List<Food>();
         Score = 0;
@@ -53,12 +53,12 @@ public class GameState
         playerSnake.NextDirection = Direction.Right;
         int startX = FieldWidth / 2;
         int startY = FieldHeight / 2;
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
         {
             playerSnake.Body.Add(new Point(startX - i, startY));
         }
         Snakes.Add(playerSnake);
-        GenerateFood(3);
+        GenerateFood(GameConfig.InitialFoodAmount);
     }
 
     public void EnqueueCommand(InputCommand command)
@@ -89,7 +89,8 @@ public class GameState
     
     public void GenerateFood(int amount)
     {
-        for (int i = 0; i < amount; i++)
+        int foodToGenerate = Math.Min(amount, GameConfig.MaxFoodCount - Food.Count);
+        for (int i = 0; i < foodToGenerate; i++)
         {
             Point? foodPosition = FindValidFoodPosition();
             if (foodPosition != null)
