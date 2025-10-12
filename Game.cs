@@ -38,7 +38,7 @@ public class Game
     private void CheckHighscore()
     {
         int finalScore = _gameState.Score;
-        int finalLength = _gameState.PlayerSnake.Body.Count;
+        int finalLength = _gameState.PlayerSnake?.Body.Count ?? 0; 
         if (_highscoreManager.IsHighscore(finalScore))
         {
             string? playerName = _menu.GetPlayerName(finalScore, finalLength);
@@ -57,7 +57,7 @@ public class Game
         Console.WriteLine("GAME OVER");
         Console.ResetColor();
         Console.WriteLine($"Final score: {_gameState.Score}");
-        Console.WriteLine($"Final length: {_gameState.PlayerSnake.Body.Count}");
+        Console.WriteLine($"Final length: {_gameState.PlayerSnake?.Body.Count ?? 0}");
         Console.WriteLine();
         if (_highscoreManager.IsHighscore(_gameState.Score))
         {

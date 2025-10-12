@@ -13,7 +13,7 @@ public class GameState
     public int FieldHeight { get; private set; }
     public int Score { get; private set; }
     
-    public Snake PlayerSnake
+    public Snake? PlayerSnake
     {
         get
         {

@@ -165,7 +165,7 @@ public class Menu
         return GetSafeInput(3, 15) ?? "Anonymous";
     }
 
-    private string GetSafeInput(int minLength, int maxLength)
+    private string? GetSafeInput(int minLength, int maxLength)
     {
         string input = string.Empty;
         int left = Console.CursorLeft;
@@ -182,22 +182,18 @@ public class Menu
                     {
                         return trimmed;
                     }
-                    else if (trimmed.Length == 0)
+                    if (trimmed.Length == 0)
                     {
                         return null;
                     }
-                    else
-                    {
-                        Console.SetCursorPosition(0, top + 1);
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Name must be between {minLength} and {maxLength} characters.");
-                        Console.ResetColor();
-                        Console.SetCursorPosition(left, top);
-                        Console.Write(new string(' ', input.Length));
-                        Console.SetCursorPosition(left, top);
-                        input = string.Empty;
-                        continue;
-                    }
+                    Console.SetCursorPosition(0, top + 1);
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"Name must be between {minLength} and {maxLength} characters.");
+                    Console.ResetColor();
+                    Console.SetCursorPosition(left, top);
+                    Console.Write(new string(' ', input.Length));
+                    Console.SetCursorPosition(left, top);
+                    input = string.Empty;
                     break;
                 case ConsoleKey.Escape:
                     Console.WriteLine();
