@@ -6,6 +6,7 @@ public class Game
     private GameRenderer _renderer;
     private Thread? _inputThread;
     private bool _isRunning;
+    private bool _isPaused;
     public readonly HighscoreManager _highscoreManager;
     public readonly Menu _menu;
     public Game(HighscoreManager highscoreManager)
@@ -97,6 +98,7 @@ public class Game
             ConsoleKey.LeftArrow or ConsoleKey.A => new InputCommand(InputCommandType.MoveLeft, 0),
             ConsoleKey.RightArrow or ConsoleKey.D => new InputCommand(InputCommandType.MoveRight, 0),
             ConsoleKey.Escape => new InputCommand(InputCommandType.ExitGame, 0),
+            ConsoleKey.P or ConsoleKey.Spacebar => new InputCommand(InputCommandType.PauseGame, 0),
             _ => null
         };
         if (command != null)
@@ -111,8 +113,12 @@ public class Game
         {
             DateTime frameStart = DateTime.Now;
             ProcessInputCommands();
-            UpdateGame();
-            _renderer.Render();
+            if (!_isPaused)
+            {
+                UpdateGame();
+            }
+
+            _renderer.Render(_isPaused);
             TimeSpan frameTime = DateTime.Now - frameStart;
             int sleepTime = CalculateSleepTime();
             int sleep = Math.Max(0, sleepTime - (int)frameTime.TotalMilliseconds);
@@ -147,6 +153,17 @@ public class Game
     }
     private bool TryCommandToSnake(InputCommand command, Snake snake)
     {
+        if (command.Type == InputCommandType.PauseGame)
+        {
+            _isPaused = !_isPaused;
+            return true;
+        }
+
+        if (_isPaused && command.Type == InputCommandType.PauseGame)
+        {
+            return false;
+        }
+        
         switch (command.Type)
         {
             case InputCommandType.MoveUp:
