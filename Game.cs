@@ -16,10 +16,6 @@ public class Game
         _menu = new Menu();
     }
 
-    // public Game() : this(new HighscoreManager())
-    // {
-    // }
-
     public void Start()
     {
         _isRunning = true;
@@ -27,17 +23,16 @@ public class Game
         Console.Clear();
         _renderer.RenderInitialScreen();
 
-        _inputThread = new Thread(HandleInput);
+        _inputThread = new Thread(HandleInput)
+        {
+            IsBackground = true
+        };
         _inputThread.Start();
 
         GameLoop();
         
-        _inputThread.Join();
         CheckHighscore();
         ShowGameOverScreen();
-        // Console.Clear();
-        // Console.WriteLine($"Game Over! Your score: {_gameState.Score}");
-        // Thread.Sleep(1000);
     }
 
     private void CheckHighscore()
@@ -87,39 +82,26 @@ public class Game
             if (Console.KeyAvailable)
             {
                 var key = Console.ReadKey(intercept: true);
-                Direction newDirection = _gameState.PlayerSnake.NextDirection;
-                switch (key.Key)
-                {
-                    case ConsoleKey.UpArrow:
-                    case ConsoleKey.W:
-                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Up))
-                            newDirection = Direction.Up;
-                        break;
-                    case ConsoleKey.DownArrow:
-                    case ConsoleKey.S:
-                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Down))
-                            newDirection = Direction.Down;
-                        break;
-                    case ConsoleKey.LeftArrow:
-                    case ConsoleKey.A:
-                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Left))
-                            newDirection = Direction.Left;
-                        break;
-                    case ConsoleKey.RightArrow:
-                    case ConsoleKey.D:
-                        if (_gameState.PlayerSnake.CanChangeDirection(Direction.Right))
-                            newDirection = Direction.Right;
-                        break;
-                    case ConsoleKey.Escape:
-                        _gameState.ShouldEndGame = true;
-                        _isRunning = false;
-                        break;
-                }
-                
-                _gameState.PlayerSnake.NextDirection = newDirection;
+                ProcessKeyPress(key.Key);
             }
-            
             Thread.Sleep(10);
+        }
+    }
+
+    private void ProcessKeyPress(ConsoleKey key)
+    {
+        InputCommand? command = key switch
+        {
+            ConsoleKey.UpArrow or ConsoleKey.W => new InputCommand(InputCommandType.MoveUp, 0),
+            ConsoleKey.DownArrow or ConsoleKey.S => new InputCommand(InputCommandType.MoveDown, 0),
+            ConsoleKey.LeftArrow or ConsoleKey.A => new InputCommand(InputCommandType.MoveLeft, 0),
+            ConsoleKey.RightArrow or ConsoleKey.D => new InputCommand(InputCommandType.MoveRight, 0),
+            ConsoleKey.Escape => new InputCommand(InputCommandType.ExitGame, 0),
+            _ => null
+        };
+        if (command != null)
+        {
+            _gameState.EnqueueCommand(command);
         }
     }
 
@@ -128,6 +110,7 @@ public class Game
         while (_isRunning && !_gameState.ShouldEndGame)
         {
             DateTime frameStart = DateTime.Now;
+            ProcessInputCommands();
             UpdateGame();
             _renderer.Render();
             TimeSpan frameTime = DateTime.Now - frameStart;
@@ -135,6 +118,73 @@ public class Game
             int sleep = Math.Max(0, sleepTime - (int)frameTime.TotalMilliseconds);
             Thread.Sleep(sleep);
         }
+    }
+
+    private void ProcessInputCommands()
+    {
+        var commands = _gameState.WaitForCommands(16);
+        var commandsByPlayer = commands.GroupBy(c => c.PlayerId);
+
+        foreach (var playerCommands in commandsByPlayer)
+        {
+            var snake = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == playerCommands.Key);
+            if (snake != null)
+            {
+                ProcessCommandsForSnake(playerCommands.ToList(), snake);
+            }
+        }
+    }
+
+    private void ProcessCommandsForSnake(List<InputCommand> commands, Snake snake)
+    {
+        foreach (var command in commands)
+        {
+            if (TryCommandToSnake(command, snake))
+            {
+                break;
+            }
+        }
+    }
+    private bool TryCommandToSnake(InputCommand command, Snake snake)
+    {
+        switch (command.Type)
+        {
+            case InputCommandType.MoveUp:
+                if (snake.CanChangeDirection(Direction.Up))
+                {
+                    snake.NextDirection = Direction.Up;
+                    return true;
+                }
+
+                break;
+            case InputCommandType.MoveDown:
+                if (snake.CanChangeDirection(Direction.Down))
+                {
+                    snake.NextDirection = Direction.Down;
+                    return true;
+                }
+
+                break;
+            case InputCommandType.MoveLeft:
+                if (snake.CanChangeDirection(Direction.Left))
+                {
+                    snake.NextDirection = Direction.Left;
+                    return true;
+                }
+
+                break;
+            case InputCommandType.MoveRight:
+                if (snake.CanChangeDirection(Direction.Right)) {
+                    snake.NextDirection = Direction.Right;
+                    return true;
+                }
+                break;
+            case InputCommandType.ExitGame:
+                _gameState.ShouldEndGame = true;
+                _isRunning = false;
+                return true;
+        }
+        return false;
     }
 
     public int CalculateSleepTime()

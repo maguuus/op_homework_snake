@@ -1,24 +1,18 @@
 namespace SnakeGame;
 
-public enum Direction
-{
-    Up,
-    Down,
-    Right,
-    Left,
-    None
-}
-
 public class GameState
 {
     private readonly System.Threading.Lock _gameStateLock = new();
     private bool _shouldExit = false;
+    private readonly Queue<InputCommand> _commandQueue = new();
+    private readonly ManualResetEvent _newCommandEvent = new(false);
+    
     public List<Snake> Snakes { get; private set;  }
     public List<Food> Food { get; private set; }
     public int FieldWidth { get; private set; }
     public int FieldHeight { get; private set; }
     public int Score { get; private set; }
-
+    
     public Snake PlayerSnake
     {
         get
@@ -54,7 +48,7 @@ public class GameState
 
     private void InitializeGame()
     {
-        var playerSnake = new Snake(isPlayer: true);
+        var playerSnake = new Snake(0, true);
         playerSnake.CurrentDirection = Direction.Right;
         playerSnake.NextDirection = Direction.Right;
         int startX = FieldWidth / 2;
@@ -67,8 +61,32 @@ public class GameState
         GenerateFood(3);
     }
 
+    public void EnqueueCommand(InputCommand command)
+    {
+        lock (_commandQueue)
+        {
+            _commandQueue.Enqueue(command);
+        }
+        _newCommandEvent.Set();
+    }
 
+    public List<InputCommand> WaitForCommands(int timeoutMilliseconds)
+    {
+        _newCommandEvent.WaitOne(timeoutMilliseconds);
+        lock (_commandQueue)
+        {
+            var commands =  _commandQueue.ToList();
+            _commandQueue.Clear();
+            _newCommandEvent.Reset();
+            return commands;
+        }
+    }
 
+    public void SignalNewCommand()
+    {
+        _newCommandEvent.Set();
+    }
+    
     public void GenerateFood(int amount)
     {
         for (int i = 0; i < amount; i++)
@@ -77,7 +95,7 @@ public class GameState
             if (foodPosition != null)
             {
                 Food.Add(new Food(foodPosition));
-            }
+            }   
         }
     }
 
@@ -109,108 +127,5 @@ public class GameState
         }
         return false;
         
-    }
-}
-
-public class Food
-{
-    public Point Position { get; }
-    public FoodType Type { get; } = FoodType.Normal;
-
-    public Food(Point position, FoodType type = FoodType.Normal)
-    {
-        Position = position;
-        Type = type;
-    }
-}
-
-public enum FoodType
-{
-    Normal,
-    Bonus
-}
-public class Point
-{
-    public int X { get; }
-    public int Y { get; }
-
-    public Point(int x, int y)
-    {
-        X = x;
-        Y = y;
-    }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj is null || !(obj is Point)) 
-            return false;
-        return X == ((Point)obj).X && Y == ((Point)obj).Y;
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(X, Y);
-    }
-
-    public static bool operator ==(Point? a, Point? b)
-    {
-        if (a is null)
-            return b is null;
-        if (b is null)
-            return false;
-        return a.X == b.X && a.Y == b.Y;
-    }
-
-    public static bool operator !=(Point? a, Point? b)
-    {
-        return !(a == b);
-    }
-}
-
-public class Snake
-{
-    private readonly System.Threading.Lock _directionLock = new();
-    private Direction _currentDirection;
-    private Direction _nextDirection;
-    
-    public List<Point> Body { get; set; } = new List<Point>();
-    public bool IsPlayer { get; }
-    public ConsoleColor Color { get; set; }
-
-    public Snake(bool isPlayer = false)
-    {
-        IsPlayer = isPlayer;
-        Color = isPlayer ? ConsoleColor.Green : ConsoleColor.Blue;
-    }
-
-    public Direction CurrentDirection
-    {
-        get { lock (_directionLock) return _currentDirection; }
-        set { lock (_directionLock) _currentDirection = value; }
-    }
-
-    public Direction NextDirection
-    {
-        get { lock (_directionLock) return _nextDirection; } 
-        set { lock (_directionLock) _nextDirection = value; }
-    }
-
-    public void UpdateDirection()
-    {
-        lock (_directionLock)
-        {
-            _currentDirection = _nextDirection;
-        }
-    }
-
-    public bool CanChangeDirection(Direction direction)
-    {
-        lock (_directionLock)
-        {
-            return (direction == Direction.Up && _currentDirection != Direction.Down) ||
-                   (direction == Direction.Down &&  _currentDirection != Direction.Up) ||
-                   (direction == Direction.Right && _currentDirection != Direction.Left) ||
-                   (direction == Direction.Left &&  _currentDirection != Direction.Right);
-        }
     }
 }
