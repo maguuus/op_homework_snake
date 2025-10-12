@@ -36,7 +36,7 @@ public class GameRenderer
         }
     }
     
-    public void Render()
+    public void Render(bool isPaused = false)
     {
         if (_firstRender)
         {
@@ -45,7 +45,7 @@ public class GameRenderer
         }
 
         ClearOldPositions();
-        DrawGameObjects();
+        DrawGameObjects(isPaused);
         SaveCurrentState();
     }
 
@@ -68,12 +68,12 @@ public class GameRenderer
         }
     }
 
-    private void DrawGameObjects()
+    private void DrawGameObjects(bool isPaused = false)
     {
         DrawBorders();
         DrawAllSnake();
         DrawAllFood();
-        DrawInfo();
+        DrawInfo(isPaused);
     }
     private void DrawBorders()
     {
@@ -95,27 +95,36 @@ public class GameRenderer
         DrawPixel(_gameState.FieldWidth - 1, _gameState.FieldHeight - 1, ConsoleColor.White, '╝');
     }
 
-    private void DrawInfo()
+    private void DrawInfo(bool isPaused = false)
     {
-        string info = "Snake game | ESC to exit | Movement - ↑↓→← arrows/WASD";
+        string info = "Snake game | ESC: exit | P/Space: pause | Movement - arrows/WASD";
         string snakeInfo = $"Length: {_gameState.PlayerSnake?.Body.Count} | Direction: {_gameState.PlayerSnake?.CurrentDirection}";
         string gameInfo = $"Score: {_gameState.Score} | Speed: {GetSpeedDescription()}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
         int snakeInfoX = Math.Max(0, (_gameState.FieldWidth - snakeInfo.Length) / 2);
         int gameInfoX = Math.Max(0, (_gameState.FieldWidth - gameInfo.Length) / 2);
-        ClearLine(_gameState.FieldHeight + 1);
-        ClearLine(_gameState.FieldHeight + 2);
-        ClearLine(_gameState.FieldHeight + 3);
+        for (int y = _gameState.FieldHeight + 1; y <= _gameState.FieldHeight + 4; y++)
+        {
+            ClearLine(y);
+        }
         DrawText(info, infoX, _gameState.FieldHeight + 1, ConsoleColor.Gray);
         DrawText(snakeInfo, snakeInfoX, _gameState.FieldHeight + 2, ConsoleColor.Yellow);
         DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 3, ConsoleColor.Cyan);
+        if (isPaused)
+        {
+            string pauseInfo = "*** PAUSED ***";
+            int pauseInfoX = Math.Max(0, (_gameState.FieldWidth - pauseInfo.Length) / 2);
+            DrawText(pauseInfo, pauseInfoX, _gameState.FieldHeight + 4, ConsoleColor.Yellow);
+        }
     }
 
     private void ClearLine(int y)
     {
-        for (int x = 0; x < _gameState.FieldWidth; x++)
+        Console.SetCursorPosition(0, y);
+        Console.Write(new string(' ', Console.WindowWidth));
+        for (int x = 0; x < Console.WindowWidth; x++)
         {
-            DrawPixel(x, y, ConsoleColor.Black, ' ');
+            _previousFrame[x, y] = ' ';
         }
     } 
     private string GetSpeedDescription()
