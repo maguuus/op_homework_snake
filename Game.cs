@@ -6,6 +6,7 @@ public class Game
     private GameRenderer _renderer;
     private Thread? _inputThread;
     private bool _isRunning;
+    private bool _isPaused;
     public readonly HighscoreManager _highscoreManager;
     public readonly Menu _menu;
     public Game(HighscoreManager highscoreManager)
@@ -84,7 +85,7 @@ public class Game
                 var key = Console.ReadKey(intercept: true);
                 ProcessKeyPress(key.Key);
             }
-            Thread.Sleep(10);
+            Thread.Sleep(GameConfig.InputPollingInterval);
         }
     }
 
@@ -103,6 +104,7 @@ public class Game
             ConsoleKey.RightArrow => new InputCommand(InputCommandType.MoveRight, 1),
             
             ConsoleKey.Escape => new InputCommand(InputCommandType.ExitGame, 0),
+            ConsoleKey.P or ConsoleKey.Spacebar => new InputCommand(InputCommandType.PauseGame, 0),
             _ => null
         };
         if (command != null)
@@ -117,8 +119,12 @@ public class Game
         {
             DateTime frameStart = DateTime.Now;
             ProcessInputCommands();
-            UpdateGame();
-            _renderer.Render();
+            if (!_isPaused)
+            {
+                UpdateGame();
+            }
+
+            _renderer.Render(_isPaused);
             TimeSpan frameTime = DateTime.Now - frameStart;
             int sleepTime = CalculateSleepTime();
             int sleep = Math.Max(0, sleepTime - (int)frameTime.TotalMilliseconds);
@@ -128,7 +134,7 @@ public class Game
 
     private void ProcessInputCommands()
     {
-        var commands = _gameState.WaitForCommands(16);
+        var commands = _gameState.WaitForCommands(GameConfig.CommandProcessingTimeout);
         var commandsByPlayer = commands.GroupBy(c => c.PlayerId);
 
         foreach (var playerCommands in commandsByPlayer)
@@ -153,6 +159,17 @@ public class Game
     }
     private bool TryCommandToSnake(InputCommand command, Snake snake)
     {
+        if (command.Type == InputCommandType.PauseGame)
+        {
+            _isPaused = !_isPaused;
+            return true;
+        }
+
+        if (_isPaused && command.Type == InputCommandType.PauseGame)
+        {
+            return false;
+        }
+        
         switch (command.Type)
         {
             case InputCommandType.MoveUp:
@@ -196,18 +213,18 @@ public class Game
     public int CalculateSleepTime()
     {
         var playerSnake = _gameState.PlayerSnake;
-        if (playerSnake == null) return 600;
+        if (playerSnake == null) return GameConfig.MinSpeed;
         
         int snakeLength = playerSnake.Body.Count;
         if (snakeLength < 10)
         {
-            return 600;
+            return GameConfig.MinSpeed;
         }
         else if (snakeLength > 30)
         {
-            return 300;
+            return GameConfig.MaxSpeed;
         }
-        return 750 - snakeLength * 15;
+        return GameConfig.MinSpeed - (snakeLength - 10) * (GameConfig.MinSpeed - GameConfig.MaxSpeed) / 20;
     }
     
     private void UpdateGame()

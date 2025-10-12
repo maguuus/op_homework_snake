@@ -6,7 +6,8 @@ public enum InputCommandType
     MoveDown,
     MoveLeft,
     MoveRight,
-    ExitGame
+    ExitGame,
+    PauseGame
 }
 
 public class InputCommand

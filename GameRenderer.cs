@@ -36,7 +36,7 @@ public class GameRenderer
         }
     }
     
-    public void Render()
+    public void Render(bool isPaused = false)
     {
         if (_firstRender)
         {
@@ -45,7 +45,7 @@ public class GameRenderer
         }
 
         ClearOldPositions();
-        DrawGameObjects();
+        DrawGameObjects(isPaused);
         SaveCurrentState();
     }
 
@@ -68,12 +68,12 @@ public class GameRenderer
         }
     }
 
-    private void DrawGameObjects()
+    private void DrawGameObjects(bool isPaused = false)
     {
         DrawBorders();
         DrawAllSnake();
         DrawAllFood();
-        DrawInfo();
+        DrawInfo(isPaused);
     }
     private void DrawBorders()
     {
@@ -95,35 +95,43 @@ public class GameRenderer
         DrawPixel(_gameState.FieldWidth - 1, _gameState.FieldHeight - 1, ConsoleColor.White, '╝');
     }
 
-    private void DrawInfo()
+    private void DrawInfo(bool isPaused = false)
     {
-        string info = "Snake game | ESC: exit | P1: WASD | P2: arrows";
+        string info = "Snake game | ESC: exit | P/space: pause | P1: WASD | P2: arrows";
 
         var player1 = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 0);
         var player2 = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 1);
-        
         string player1Info = $"P1: Length: {player1?.Body.Count ?? 0} | Direction: {player1?.CurrentDirection ?? Direction.None}";
         string player2Info = $"P2: Length: {player2?.Body.Count ?? 0} | Direction: {player2?.CurrentDirection ?? Direction.None}";
+        string snakeInfo = $"Length: {_gameState.PlayerSnake?.Body.Count} | Direction: {_gameState.PlayerSnake?.CurrentDirection}";
         string gameInfo = $"Score: {_gameState.Score} | Speed: {GetSpeedDescription()}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
         int player1X = Math.Max(0, (_gameState.FieldWidth - player1Info.Length) / 2);
         int player2X = Math.Max(0, (_gameState.FieldWidth - player2Info.Length) / 2);
         int gameInfoX = Math.Max(0, (_gameState.FieldWidth - gameInfo.Length) / 2);
-        ClearLine(_gameState.FieldHeight + 1);
-        ClearLine(_gameState.FieldHeight + 2);
-        ClearLine(_gameState.FieldHeight + 3);
-        ClearLine(_gameState.FieldHeight + 4);
+        for (int y = _gameState.FieldHeight + 1; y <= _gameState.FieldHeight + 5; y++)
+        {
+            ClearLine(y);
+        }
         DrawText(info, infoX, _gameState.FieldHeight + 1, ConsoleColor.Gray);
         DrawText(player1Info, player1X, _gameState.FieldHeight + 2, ConsoleColor.Green);
         DrawText(player2Info, player2X, _gameState.FieldHeight + 3, ConsoleColor.Blue);
         DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 4, ConsoleColor.Cyan);
+        if (isPaused)
+        {
+            string pauseInfo = "*** PAUSED ***";
+            int pauseInfoX = Math.Max(0, (_gameState.FieldWidth - pauseInfo.Length) / 2);
+            DrawText(pauseInfo, pauseInfoX, _gameState.FieldHeight + 5, ConsoleColor.Yellow);
+        }
     }
 
     private void ClearLine(int y)
     {
-        for (int x = 0; x < _gameState.FieldWidth; x++)
+        Console.SetCursorPosition(0, y);
+        Console.Write(new string(' ', Console.WindowWidth));
+        for (int x = 0; x < Console.WindowWidth; x++)
         {
-            DrawPixel(x, y, ConsoleColor.Black, ' ');
+            _previousFrame[x, y] = ' ';
         }
     } 
     private string GetSpeedDescription()
