@@ -97,18 +97,26 @@ public class GameRenderer
 
     private void DrawInfo()
     {
-        string info = "Snake game | ESC to exit | Movement - ↑↓→← arrows/WASD";
-        string snakeInfo = $"Length: {_gameState.PlayerSnake?.Body.Count} | Direction: {_gameState.PlayerSnake?.CurrentDirection}";
+        string info = "Snake game | ESC: exit | P1: WASD | P2: arrows";
+
+        var player1 = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 0);
+        var player2 = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 1);
+        
+        string player1Info = $"P1: Length: {player1?.Body.Count ?? 0} | Direction: {player1?.CurrentDirection ?? Direction.None}";
+        string player2Info = $"P2: Length: {player2?.Body.Count ?? 0} | Direction: {player2?.CurrentDirection ?? Direction.None}";
         string gameInfo = $"Score: {_gameState.Score} | Speed: {GetSpeedDescription()}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
-        int snakeInfoX = Math.Max(0, (_gameState.FieldWidth - snakeInfo.Length) / 2);
+        int player1X = Math.Max(0, (_gameState.FieldWidth - player1Info.Length) / 2);
+        int player2X = Math.Max(0, (_gameState.FieldWidth - player2Info.Length) / 2);
         int gameInfoX = Math.Max(0, (_gameState.FieldWidth - gameInfo.Length) / 2);
         ClearLine(_gameState.FieldHeight + 1);
         ClearLine(_gameState.FieldHeight + 2);
         ClearLine(_gameState.FieldHeight + 3);
+        ClearLine(_gameState.FieldHeight + 4);
         DrawText(info, infoX, _gameState.FieldHeight + 1, ConsoleColor.Gray);
-        DrawText(snakeInfo, snakeInfoX, _gameState.FieldHeight + 2, ConsoleColor.Yellow);
-        DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 3, ConsoleColor.Cyan);
+        DrawText(player1Info, player1X, _gameState.FieldHeight + 2, ConsoleColor.Green);
+        DrawText(player2Info, player2X, _gameState.FieldHeight + 3, ConsoleColor.Blue);
+        DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 4, ConsoleColor.Cyan);
     }
 
     private void ClearLine(int y)
@@ -151,11 +159,25 @@ public class GameRenderer
         {
             var segment = snake.Body[i];
             char symbol = (i == 0) ? GetHeadSymbol(snake.CurrentDirection) : '●';
-            ConsoleColor color = (i == 0) ? ConsoleColor.Green : ConsoleColor.DarkGreen;
+            ConsoleColor color = (i == 0) ? snake.Color : GetBodyColor(snake.Color);
             DrawPixel(segment.X, segment.Y, color, symbol);
         }
     }
 
+    private ConsoleColor GetBodyColor(ConsoleColor color)
+    {
+        return color switch
+        {
+            ConsoleColor.Green => ConsoleColor.DarkGreen,
+            ConsoleColor.Red => ConsoleColor.DarkRed,
+            ConsoleColor.Yellow => ConsoleColor.DarkYellow,
+            ConsoleColor.Blue => ConsoleColor.DarkBlue,
+            ConsoleColor.Cyan => ConsoleColor.DarkCyan,
+            ConsoleColor.Magenta =>  ConsoleColor.DarkMagenta,
+            _ => ConsoleColor.DarkGray,
+        };
+    }
+    
     private char GetHeadSymbol(Direction direction)
     {
         return direction switch

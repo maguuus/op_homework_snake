@@ -51,13 +51,23 @@ public class GameState
         var playerSnake = new Snake(0, true);
         playerSnake.CurrentDirection = Direction.Right;
         playerSnake.NextDirection = Direction.Right;
+        playerSnake.Color = ConsoleColor.Green;
         int startX = FieldWidth / 2;
         int startY = FieldHeight / 2;
         for (int i = 0; i < 5; i++)
         {
             playerSnake.Body.Add(new Point(startX - i, startY));
         }
+        var player2Snake = new Snake(1, true);
+        player2Snake.CurrentDirection = Direction.Up;
+        player2Snake.NextDirection = Direction.Up;
+        player2Snake.Color = ConsoleColor.Blue;
+        for (int i = 0; i < 5; i++)
+        {
+            player2Snake.Body.Add(new Point(startX + 5 + i, startY));
+        }
         Snakes.Add(playerSnake);
+        Snakes.Add(player2Snake);
         GenerateFood(3);
     }
 

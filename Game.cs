@@ -92,10 +92,16 @@ public class Game
     {
         InputCommand? command = key switch
         {
-            ConsoleKey.UpArrow or ConsoleKey.W => new InputCommand(InputCommandType.MoveUp, 0),
-            ConsoleKey.DownArrow or ConsoleKey.S => new InputCommand(InputCommandType.MoveDown, 0),
-            ConsoleKey.LeftArrow or ConsoleKey.A => new InputCommand(InputCommandType.MoveLeft, 0),
-            ConsoleKey.RightArrow or ConsoleKey.D => new InputCommand(InputCommandType.MoveRight, 0),
+            ConsoleKey.W => new InputCommand(InputCommandType.MoveUp, 0),
+            ConsoleKey.S => new InputCommand(InputCommandType.MoveDown, 0),
+            ConsoleKey.A => new InputCommand(InputCommandType.MoveLeft, 0),
+            ConsoleKey.D => new InputCommand(InputCommandType.MoveRight, 0),
+            
+            ConsoleKey.UpArrow => new InputCommand(InputCommandType.MoveUp, 1),
+            ConsoleKey.DownArrow => new InputCommand(InputCommandType.MoveDown, 1),
+            ConsoleKey.LeftArrow => new InputCommand(InputCommandType.MoveLeft, 1),
+            ConsoleKey.RightArrow => new InputCommand(InputCommandType.MoveRight, 1),
+            
             ConsoleKey.Escape => new InputCommand(InputCommandType.ExitGame, 0),
             _ => null
         };
@@ -206,7 +212,10 @@ public class Game
     
     private void UpdateGame()
     {
-        _gameState.PlayerSnake?.UpdateDirection();
+        foreach (var snake in _gameState.Snakes)
+        {
+            snake.UpdateDirection();
+        }
         foreach (var snake in _gameState.Snakes)
         {
             if (snake.Body.Count == 0) continue;
