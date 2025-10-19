@@ -13,9 +13,11 @@ public class HighscoreEntry
 
 public class HighscoreManager
 {
-    private const string HighscoreFile =  "highscore.json";
+    private const string SinglePlayerHighscoreFile =  "highscore_single.json";
+    private const string MultiPlayerHighscoreFile =  "highscore_multi.json";
     private const int MaxEntries = 10;
-    private readonly List<HighscoreEntry> _highscore;    
+    private readonly List<HighscoreEntry> _singlePlayerHighscore;
+    private readonly List<HighscoreEntry> _multiPlayerHighscore;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public HighscoreManager()
@@ -26,27 +28,28 @@ public class HighscoreManager
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
-        _highscore = new  List<HighscoreEntry>();
-        LoadHighscore();
+        _singlePlayerHighscore = new List<HighscoreEntry>();
+        _multiPlayerHighscore = new List<HighscoreEntry>();
+        LoadHighscore(SinglePlayerHighscoreFile, _singlePlayerHighscore);
+        LoadHighscore(MultiPlayerHighscoreFile, _multiPlayerHighscore);
     }
 
-    public void LoadHighscore()
+    public void LoadHighscore(string filename, List<HighscoreEntry> highscore)
     {
-        _highscore.Clear();
-        if (!File.Exists(HighscoreFile))
+        highscore.Clear();
+        if (!File.Exists(filename))
         {
-            Console.WriteLine($"File {HighscoreFile} does not exist. Starting with empty leaderboard.");
+            Console.WriteLine($"File {filename} does not exist. Starting with empty leaderboard.");
             return;
         }
-
         try
         {
-            var json = File.ReadAllText(HighscoreFile);
+            var json = File.ReadAllText(filename);
             var loadedHighscore = JsonSerializer.Deserialize<List<HighscoreEntry>>(json, _jsonOptions);
             if (loadedHighscore != null)
             {
-                _highscore.AddRange(loadedHighscore);
-                _highscore.Sort((a, b) =>
+                highscore.AddRange(loadedHighscore);
+                highscore.Sort((a, b) =>
                 {
                     int scoreComp = b.Score.CompareTo(a.Score);
                     if (scoreComp != 0)
@@ -61,14 +64,15 @@ public class HighscoreManager
         }
     }
 
-    public void SaveHighscore()
+    public void SaveHighscore(GameMode gameMode)
     {
+        var filename = gameMode == GameMode.SinglePlayer ? "highscore_single.json" : "highscore_multi.json";
+        var highscore = GetHighscore(gameMode);
         try
         {
-            var json = JsonSerializer.Serialize(_highscore, _jsonOptions);
-            // var lines = _highscore.Select(x => $"{x.PlayerName} | {x.Score} | {x.Time:dd.MM.yyyy} | {x.SnakeLength}");
-            File.WriteAllText(HighscoreFile, json);
-            Console.WriteLine($"Highscore saved to {HighscoreFile}");
+            var json = JsonSerializer.Serialize(highscore, _jsonOptions);
+            File.WriteAllText(filename, json);
+            Console.WriteLine($"Highscore saved to {filename}");
         }
         catch (Exception e)
         {
@@ -76,13 +80,15 @@ public class HighscoreManager
         }
     }
 
-    public bool IsHighscore(int score)
+    public bool IsHighscore(int score, GameMode gameMode)
     {
-        return _highscore.Count < MaxEntries || score > _highscore.Last().Score;
+        var highscore = GetHighscoreList(gameMode);
+        return highscore.Count < MaxEntries || score > highscore.Last().Score;
     }
 
-    public void AddScore(string playerName, int score, int snakeLength)
+    public void AddScore(string playerName, int score, int snakeLength, GameMode gameMode)
     {
+        var highscore = GetHighscoreList(gameMode);
         var entry = new HighscoreEntry
         {
             PlayerName = playerName,
@@ -90,8 +96,8 @@ public class HighscoreManager
             Time = DateTime.Now,
             SnakeLength = snakeLength
         };
-        _highscore.Add(entry);
-        _highscore.Sort((a, b) =>
+        highscore.Add(entry);
+        highscore.Sort((a, b) =>
         {
             int scoreComp = b.Score.CompareTo(a.Score);
             if (scoreComp != 0)
@@ -99,20 +105,27 @@ public class HighscoreManager
             return a.Time.CompareTo(b.Time);
         });
         
-        if (_highscore.Count > MaxEntries)
+        if (highscore.Count > MaxEntries)
         {
-            _highscore.RemoveAt(_highscore.Count - 1);
+            highscore.RemoveAt(highscore.Count - 1);
         }
-        SaveHighscore();
+        SaveHighscore(gameMode);
     }
 
-    public List<HighscoreEntry> GetHighscore()
+    public List<HighscoreEntry> GetHighscore(GameMode gameMode)
     {
-        return new List<HighscoreEntry>(_highscore);
+        return new List<HighscoreEntry>(GetHighscoreList(gameMode));
     }
 
-    public int GetMinimumTopScore()
+    private List<HighscoreEntry> GetHighscoreList(GameMode gameMode)
     {
-        return _highscore.Count > 0 ? _highscore.Last().Score : 0;
+        return gameMode == GameMode.SinglePlayer ?  _singlePlayerHighscore : _multiPlayerHighscore;
+    }
+    
+
+    public int GetMinimumTopScore(GameMode gameMode)
+    {
+        var highscore = GetHighscoreList(gameMode);
+        return highscore.Count > 0 ? highscore.Last().Score : 0;
     }
 }

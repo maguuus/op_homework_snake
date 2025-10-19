@@ -6,7 +6,7 @@ public static class GameConfig
     public const int InitialFoodAmount = 3;
     public const int InitialSnakeLength = 5;
     public const int FieldWidthBuffer = 10;
-    public const int FieldHeightBuffer = 5;
+    public const int FieldHeightBuffer = 6;
     public const int MinFieldWidth = 20;
     public const int MinFieldHeight = 15;
 

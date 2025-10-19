@@ -97,17 +97,17 @@ public class GameRenderer
 
     private void DrawInfo(bool isPaused = false)
     {
-        string info = "Snake game | ESC: exit | P/space: pause | P1: WASD | P2: arrows";
-
         var player1 = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 0);
         var player2 = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 1);
+        var isMultiplayer = _gameState.Snakes.Count > 1 && player2 != null;
+        string info = isMultiplayer 
+            ? "Snake game | ESC: exit | P/space: pause | P1: WASD | P2: arrows" 
+            : "Snake game | ESC: exit | P/space: pause | Move: WASD";
         string player1Info = $"P1: Length: {player1?.Body.Count ?? 0} | Direction: {player1?.CurrentDirection ?? Direction.None}";
-        string player2Info = $"P2: Length: {player2?.Body.Count ?? 0} | Direction: {player2?.CurrentDirection ?? Direction.None}";
         string snakeInfo = $"Length: {_gameState.PlayerSnake?.Body.Count} | Direction: {_gameState.PlayerSnake?.CurrentDirection}";
         string gameInfo = $"Score: {_gameState.Score} | Speed: {GetSpeedDescription()}";
         int infoX = Math.Max(0, (_gameState.FieldWidth - info.Length) / 2);
         int player1X = Math.Max(0, (_gameState.FieldWidth - player1Info.Length) / 2);
-        int player2X = Math.Max(0, (_gameState.FieldWidth - player2Info.Length) / 2);
         int gameInfoX = Math.Max(0, (_gameState.FieldWidth - gameInfo.Length) / 2);
         for (int y = _gameState.FieldHeight + 1; y <= _gameState.FieldHeight + 5; y++)
         {
@@ -115,13 +115,23 @@ public class GameRenderer
         }
         DrawText(info, infoX, _gameState.FieldHeight + 1, ConsoleColor.Gray);
         DrawText(player1Info, player1X, _gameState.FieldHeight + 2, ConsoleColor.Green);
-        DrawText(player2Info, player2X, _gameState.FieldHeight + 3, ConsoleColor.Blue);
-        DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 4, ConsoleColor.Cyan);
+        if (isMultiplayer)
+        {
+            string player2Info = $"P2: Length: {player2?.Body.Count ?? 0} | Direction: {player2?.CurrentDirection ?? Direction.None}";
+            int player2X = Math.Max(0, (_gameState.FieldWidth - player2Info.Length) / 2);    
+            DrawText(player2Info, player2X, _gameState.FieldHeight + 3, ConsoleColor.Blue);
+            DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 4, ConsoleColor.Cyan);
+        }
+        else
+        {
+            DrawText(gameInfo, gameInfoX, _gameState.FieldHeight + 3, ConsoleColor.Cyan);
+        }
         if (isPaused)
         {
             string pauseInfo = "*** PAUSED ***";
             int pauseInfoX = Math.Max(0, (_gameState.FieldWidth - pauseInfo.Length) / 2);
-            DrawText(pauseInfo, pauseInfoX, _gameState.FieldHeight + 5, ConsoleColor.Yellow);
+            int pauseInfoY = isMultiplayer ? _gameState.FieldHeight + 5 : _gameState.FieldHeight + 4;
+            DrawText(pauseInfo, pauseInfoX, pauseInfoY, ConsoleColor.Yellow);
         }
     }
 
@@ -129,7 +139,7 @@ public class GameRenderer
     {
         Console.SetCursorPosition(0, y);
         Console.Write(new string(' ', Console.WindowWidth));
-        for (int x = 0; x < Console.WindowWidth; x++)
+        for (int x = 0; x < _gameState.FieldWidth; x++)
         {
             _previousFrame[x, y] = ' ';
         }
