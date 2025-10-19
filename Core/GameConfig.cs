@@ -1,4 +1,4 @@
-namespace SnakeGame;
+namespace op_homework_snake_game.Core;
 
 public static class GameConfig
 {

@@ -1,9 +1,13 @@
-namespace SnakeGame;
+using op_homework_snake_game.Entities;
+using op_homework_snake_game.Enums;
+using op_homework_snake_game.Input;
+
+namespace op_homework_snake_game.Core;
 
 public class GameState
 {
-    private readonly System.Threading.Lock _gameStateLock = new();
-    private bool _shouldExit = false;
+    private readonly Lock _gameStateLock = new();
+    private bool _shouldExit;
     private readonly GameMode _gameMode;
     private readonly Queue<InputCommand> _commandQueue = new();
     private readonly ManualResetEvent _newCommandEvent = new(false);
@@ -12,7 +16,7 @@ public class GameState
     public List<Food> Food { get; private set; }
     public int FieldWidth { get; private set; }
     public int FieldHeight { get; private set; }
-    public int Score { get; set; }
+    public int Score { get; private set; }
     public GameResult GameResult { get; set; } = GameResult.InProgress;
     public int? WinnerPlayerId { get; set; }
     public int? WinnerLength { get; set; }
@@ -22,7 +26,7 @@ public class GameState
         {
             lock (_gameStateLock)
             {
-                return Snakes?.FirstOrDefault(s => s.IsPlayer);
+                return Snakes.FirstOrDefault(s => s.IsPlayer);
             }
         }
     }
@@ -54,11 +58,12 @@ public class GameState
     {
         Snakes.Clear();
         Food.Clear();
-        // GameRende
-        var playerSnake = new Snake(0, true);
-        playerSnake.CurrentDirection = Direction.Right;
-        playerSnake.NextDirection = Direction.Right;
-        playerSnake.Color = ConsoleColor.Green;
+        var playerSnake = new Snake(0, true)
+        {
+            CurrentDirection = Direction.Right,
+            NextDirection = Direction.Right,
+            Color = ConsoleColor.Green
+        };
         int startX = FieldWidth / 2;
         int startY = FieldHeight / 2;
         for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
@@ -68,10 +73,12 @@ public class GameState
         Snakes.Add(playerSnake);
         if (_gameMode == GameMode.MultiPlayer)
         {
-            var player2Snake = new Snake(1, true);
-            player2Snake.CurrentDirection = Direction.Up;
-            player2Snake.NextDirection = Direction.Up;
-            player2Snake.Color = ConsoleColor.Blue;
+            var player2Snake = new Snake(1, true)
+            {
+                CurrentDirection = Direction.Up,
+                NextDirection = Direction.Up,
+                Color = ConsoleColor.Blue
+            };
             for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
             {
                 player2Snake.Body.Add(new Point(startX + 5 + i, startY));

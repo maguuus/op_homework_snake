@@ -1,9 +1,7 @@
-using System;
 using System.Runtime.InteropServices;
-using System.Threading;
-using SnakeGame;
+using SnakeGame.UI;
 
-namespace SnakeGame 
+namespace op_homework_snake_game 
 {
     class Program
     {
@@ -11,10 +9,10 @@ namespace SnakeGame
         private static extern int tcgetattr(int fd, out Termios termios);
 
         [DllImport("libc", SetLastError = true)]
-        private static extern int tcsetattr(int fd, int optional_actions, ref Termios termios);
+        private static extern int tcsetattr(int fd, int optionalActions, ref Termios termios);
 
-        private const int STDIN_FILENO = 0;
-        private const int TCSANOW = 0;
+        private const int StdinFileno = 0;
+        private const int Tcsanow = 0;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct Termios
@@ -31,32 +29,22 @@ namespace SnakeGame
             public uint c_ospeed;
         }
 
-        private static Termios oldt;
+        private static Termios _oldt;
 
         static void EnableRawMode()
         {
-            tcgetattr(STDIN_FILENO, out oldt);
-            var newt = oldt;
+            tcgetattr(StdinFileno, out _oldt);
+            var newt = _oldt;
             newt.c_lflag &= ~(2u | 8u); // ICANON (2) + ECHO (8)
-            tcsetattr(STDIN_FILENO, TCSANOW, ref newt);
+            tcsetattr(StdinFileno, Tcsanow, ref newt);
         }
 
         static void DisableRawMode()
         {
-            tcsetattr(STDIN_FILENO, TCSANOW, ref oldt);
+            tcsetattr(StdinFileno, Tcsanow, ref _oldt);
         }
-        
-        public static void DrawPixel(int x, int y, ConsoleColor color, char symbol = '█')
-        {
-            if (x >= 0 && y >= 0 && x < Console.WindowWidth && y < Console.WindowHeight)
-            {
-                Console.SetCursorPosition(x, y);
-                Console.ForegroundColor = color;
-                Console.Write(symbol);
-            }
-        }
-        
-        static void Main(string[] args)
+
+        static void Main()
         {
             Console.CursorVisible = false;
             Console.Clear();

@@ -1,6 +1,9 @@
 using System.Diagnostics;
+using op_homework_snake_game.Core;
+using op_homework_snake_game.Enums;
+using op_homework_snake_game.UI;
 
-namespace SnakeGame;
+namespace SnakeGame.UI;
 
 public class Menu
 {

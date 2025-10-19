@@ -1,20 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using op_homework_snake_game.Data;
+using op_homework_snake_game.Enums;
 
-namespace SnakeGame;
-
-public class HighscoreEntry
-{
-    public string PlayerName { get; set; } = string.Empty;
-    public int Score { get; set; }
-    public DateTime Time { get; set; }
-    public int SnakeLength { get; set; }
-}
+namespace op_homework_snake_game.UI;
 
 public class HighscoreManager
 {
-    private const string SinglePlayerHighscoreFile =  "highscore_single.json";
-    private const string MultiPlayerHighscoreFile =  "highscore_multi.json";
+    private const string DataDirectory = "Data";
+    private const string ScoresDirectory = "Data/Scores";
+    private const string SinglePlayerHighscoreFile =  "Data/Scores/highscore_single.json";
+    private const string MultiPlayerHighscoreFile =  "Data/Scores/highscore_multi.json";
     private const int MaxEntries = 10;
     private readonly List<HighscoreEntry> _singlePlayerHighscore;
     private readonly List<HighscoreEntry> _multiPlayerHighscore;
@@ -28,20 +24,33 @@ public class HighscoreManager
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
+        try
+        {
+            if (!Directory.Exists(DataDirectory))
+                Directory.CreateDirectory(DataDirectory);
+            if (!Directory.Exists(ScoresDirectory))
+                Directory.CreateDirectory(ScoresDirectory);
+            if (!File.Exists(SinglePlayerHighscoreFile))
+                File.Create(SinglePlayerHighscoreFile).Close();
+            if (!File.Exists(MultiPlayerHighscoreFile))
+                File.Create(MultiPlayerHighscoreFile).Close();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error creating data directories: {e}");
+        }
+        
         _singlePlayerHighscore = new List<HighscoreEntry>();
         _multiPlayerHighscore = new List<HighscoreEntry>();
         LoadHighscore(SinglePlayerHighscoreFile, _singlePlayerHighscore);
         LoadHighscore(MultiPlayerHighscoreFile, _multiPlayerHighscore);
     }
 
-    public void LoadHighscore(string filename, List<HighscoreEntry> highscore)
+    private void LoadHighscore(string filename, List<HighscoreEntry> highscore)
     {
         highscore.Clear();
         if (!File.Exists(filename))
-        {
-            Console.WriteLine($"File {filename} does not exist. Starting with empty leaderboard.");
             return;
-        }
         try
         {
             var json = File.ReadAllText(filename);
@@ -60,13 +69,13 @@ public class HighscoreManager
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error loading highscore: {e.Message}");
+            Console.WriteLine($"Error loading {filename}: {e.Message}");
         }
     }
 
-    public void SaveHighscore(GameMode gameMode)
+    private void SaveHighscore(GameMode gameMode)
     {
-        var filename = gameMode == GameMode.SinglePlayer ? "highscore_single.json" : "highscore_multi.json";
+        var filename = gameMode == GameMode.SinglePlayer ? SinglePlayerHighscoreFile : MultiPlayerHighscoreFile;
         var highscore = GetHighscore(gameMode);
         try
         {
@@ -114,7 +123,7 @@ public class HighscoreManager
 
     public List<HighscoreEntry> GetHighscore(GameMode gameMode)
     {
-        return new List<HighscoreEntry>(GetHighscoreList(gameMode));
+        return [..GetHighscoreList(gameMode)];
     }
 
     private List<HighscoreEntry> GetHighscoreList(GameMode gameMode)

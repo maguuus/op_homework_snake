@@ -1,4 +1,11 @@
-namespace SnakeGame;
+using op_homework_snake_game.Entities;
+using op_homework_snake_game.Enums;
+using op_homework_snake_game.Input;
+using op_homework_snake_game.Rendering;
+using op_homework_snake_game.UI;
+using SnakeGame.UI;
+
+namespace op_homework_snake_game.Core;
 
 public class Game
 {
@@ -8,20 +15,20 @@ public class Game
     private Thread? _inputThread;
     private bool _isRunning;
     private bool _isPaused;
-    public readonly HighscoreManager HighscoreManager;
-    public readonly Menu Menu;
+    private readonly HighscoreManager _highscoreManager;
+    private readonly Menu _menu;
     public Game(HighscoreManager highscoreManager, GameMode gameMode)
     {
         _gameMode = gameMode;
         _gameState = new GameState(_gameMode);
         _renderer = new GameRenderer(_gameState);
-        HighscoreManager = highscoreManager;
-        Menu = new Menu();
+        _highscoreManager = highscoreManager;
+        _menu = new Menu();
     }
 
     public void Start()
     {
-        bool restartReq = false;
+        bool restartReq;
         do
         {
             _isRunning = true;
@@ -52,12 +59,12 @@ public class Game
     private void CheckHighscore()
     {
         int finalScore = _gameState.Score;
-        if (HighscoreManager.IsHighscore(finalScore, _gameMode) && (_gameMode != GameMode.MultiPlayer || _gameState.GameResult == GameResult.Victory))
+        if (_highscoreManager.IsHighscore(finalScore, _gameMode) && (_gameMode != GameMode.MultiPlayer || _gameState.GameResult == GameResult.Victory))
         {
-            string? playerName = _gameMode == GameMode.SinglePlayer 
-                ? Menu.GetPlayerName(finalScore, _gameState.WinnerLength ?? 0, _gameMode, 1) 
-                : Menu.GetPlayerName(finalScore, _gameState.WinnerLength?? 0, _gameMode, _gameState.Snakes.First().PlayerId);;
-            HighscoreManager.AddScore(playerName, finalScore, _gameState.WinnerLength?? 0, _gameMode); 
+            string playerName = _gameMode == GameMode.SinglePlayer 
+                ? _menu.GetPlayerName(finalScore, _gameState.WinnerLength ?? 0, _gameMode, 1) 
+                : _menu.GetPlayerName(finalScore, _gameState.WinnerLength?? 0, _gameMode, _gameState.Snakes.First().PlayerId);
+            _highscoreManager.AddScore(playerName, finalScore, _gameState.WinnerLength?? 0, _gameMode); 
         }
     }
 
@@ -89,7 +96,7 @@ public class Game
         }
         Console.WriteLine($"Final score: {_gameState.Score}");
         Console.WriteLine();
-        if (HighscoreManager.IsHighscore(_gameState.Score, _gameMode))
+        if (_highscoreManager.IsHighscore(_gameState.Score, _gameMode))
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("NEW HIGHSCORE!");
@@ -97,7 +104,7 @@ public class Game
         }
         else
         {
-            int minTopScore = HighscoreManager.GetMinimumTopScore(_gameMode);
+            int minTopScore = _highscoreManager.GetMinimumTopScore(_gameMode);
             Console.WriteLine($"Top 10 minimum: {minTopScore} points");
         }
     }
@@ -119,18 +126,18 @@ public class Game
     {
         InputCommand? command = key switch
         {
-            ConsoleKey.W => new InputCommand(InputCommandType.MoveUp, 0),
-            ConsoleKey.S => new InputCommand(InputCommandType.MoveDown, 0),
-            ConsoleKey.A => new InputCommand(InputCommandType.MoveLeft, 0),
-            ConsoleKey.D => new InputCommand(InputCommandType.MoveRight, 0),
+            ConsoleKey.W => new InputCommand(InputCommandType.MoveUp),
+            ConsoleKey.S => new InputCommand(InputCommandType.MoveDown),
+            ConsoleKey.A => new InputCommand(InputCommandType.MoveLeft),
+            ConsoleKey.D => new InputCommand(InputCommandType.MoveRight),
             
             ConsoleKey.UpArrow => new InputCommand(InputCommandType.MoveUp, 1),
             ConsoleKey.DownArrow => new InputCommand(InputCommandType.MoveDown, 1),
             ConsoleKey.LeftArrow => new InputCommand(InputCommandType.MoveLeft, 1),
             ConsoleKey.RightArrow => new InputCommand(InputCommandType.MoveRight, 1),
             
-            ConsoleKey.Escape => new InputCommand(InputCommandType.ExitGame, 0),
-            ConsoleKey.P or ConsoleKey.Spacebar => new InputCommand(InputCommandType.PauseGame, 0),
+            ConsoleKey.Escape => new InputCommand(InputCommandType.ExitGame),
+            ConsoleKey.P or ConsoleKey.Spacebar => new InputCommand(InputCommandType.PauseGame),
             _ => null
         };
         if (command != null)
@@ -237,7 +244,7 @@ public class Game
         return false;
     }
 
-    public int CalculateSleepTime()
+    private int CalculateSleepTime()
     {
         int snakeLength = _gameState.Snakes.Count != 0 ? _gameState.Snakes.Max(s => s.Body.Count) : 0;
         
