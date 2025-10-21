@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using SnakeGame.UI;
+using op_homework_snake_game.UI;
 
 namespace op_homework_snake_game 
 {
@@ -57,8 +57,6 @@ namespace op_homework_snake_game
             }
             catch (Exception ex)
             {
-                Console.Clear();
-                Console.SetCursorPosition(0, 0);
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"BADERROR: {ex.Message}");
                 Console.WriteLine($"{ex.StackTrace}");

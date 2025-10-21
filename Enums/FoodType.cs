@@ -7,7 +7,7 @@ public enum FoodType
     Speed,      // +1 score, +1 length, temporary boost
     Slow,       // +1 score, +1 length, temporary slowness
     Reverse,    // +3 score, +1 length, reversed movement
-    Shield,     // +2 score, +1 length, immune to walls (not added yet)
+    Shield,     // +2 score, +1 length, immune to walls and barriers
     Double,     // +2 score, +1 length, x2 score and length added for next food
     Shrink,     // +5 score, +1 length, shrinks by 3 (length after >= 3)
     None

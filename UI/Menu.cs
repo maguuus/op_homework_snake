@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using op_homework_snake_game.Core;
 using op_homework_snake_game.Enums;
-using op_homework_snake_game.UI;
 
-namespace SnakeGame.UI;
+namespace op_homework_snake_game.UI;
 
 public class Menu
 {
@@ -16,7 +14,6 @@ public class Menu
         "Top players",
         "Exit"
     };
-
     public Menu()
     {
         _highscoreManager = new HighscoreManager();
@@ -110,7 +107,74 @@ public class Menu
 
     private void StartGame(GameMode gameMode)
     {
-        var game = new Game(_highscoreManager, gameMode);
+        var maps = MapLoader.LoadMaps();
+        var availableMaps = maps.Where(map => map.AllowedModes.Contains(gameMode)).ToList();
+        var selectedPath = " ";
+        if (availableMaps.Count != 0)
+        {
+            int selectedIndex = 0;
+            ConsoleKey key;
+            do {
+                Console.Clear();
+                string title = "==== Select map ====";
+                int titleX = (Console.WindowWidth - title.Length) / 2;
+                int titleY = Console.WindowHeight / 2;
+                Console.SetCursorPosition(titleX, titleY);
+                Console.Write(title);
+                int startY = titleY + 2;
+                for (int i = 0; i < availableMaps.Count; i++)
+                {
+                    Console.ResetColor();
+                    string line = $"{i + 1}. {availableMaps[i].Name}";
+                    int x = (Console.WindowWidth - line.Length - 4) / 2;
+                    int y = startY + i;
+                    Console.SetCursorPosition(x, y);
+                    if (i == selectedIndex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Black;
+                        Console.BackgroundColor = ConsoleColor.White;
+                        Console.Write($"> {line}");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.Write($"  {line}");
+                        Console.ResetColor();
+                    }
+                }
+                Console.ForegroundColor = ConsoleColor.Green;
+                string hint1 = "Use WASD/↑↓ arrows to navigate, Enter to select";
+                string hint2 = "Press ESC to exit";
+                int hint1X = (Console.WindowWidth - hint1.Length) / 2;
+                int hint2X = (Console.WindowWidth - hint2.Length) / 2;
+                Console.SetCursorPosition(hint1X, startY + availableMaps.Count + 2);
+                Console.Write(hint1);
+                Console.SetCursorPosition(hint2X, startY + availableMaps.Count + 3);
+                Console.Write(hint2);
+                Console.ResetColor();
+                
+                key = Console.ReadKey(true).Key;
+                switch (key)
+                {
+                    case ConsoleKey.UpArrow:
+                    case ConsoleKey.W:
+                        selectedIndex = (selectedIndex - 1 + availableMaps.Count) % availableMaps.Count;
+                        break;
+                    case ConsoleKey.DownArrow:
+                    case ConsoleKey.S:
+                        selectedIndex = (selectedIndex + 1) % availableMaps.Count;
+                        break;
+                    case ConsoleKey.Escape:
+                        Console.Clear();
+                        return;
+                }
+            } while (key != ConsoleKey.Enter);
+            selectedPath = availableMaps[selectedIndex].FilePath;
+            
+        }
+        var game = new Game(_highscoreManager, gameMode, Path.GetFileNameWithoutExtension(selectedPath));
         game.Start();
     }
 
@@ -192,14 +256,9 @@ public class Menu
     {
         Console.Clear();
         Console.ForegroundColor = ConsoleColor.Green;
-        if (gameMode == GameMode.SinglePlayer)
-        {
-            Console.WriteLine($"Congratulations!");
-        }
-        else
-        {
-            Console.WriteLine($"Congratulations, Player {winner + 1}!");
-        }
+        Console.WriteLine(gameMode == GameMode.SinglePlayer
+            ? $"Congratulations!"
+            : $"Congratulations, Player {winner + 1}!");
         Console.ResetColor();
         Console.WriteLine($"You achieved {score} points with a snake length of {snakeLength}!");
         Console.WriteLine($"Mode: {gameMode}");

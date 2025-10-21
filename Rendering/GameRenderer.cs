@@ -10,6 +10,7 @@ public class GameRenderer(GameState gameState)
     private bool _firstRender = true;
     private List<Point> _previousSnakePositions = [];
     private List<Point> _previousFoodPositions = [];
+    private List<Point> _previousWallPositions = [];
 
     public void RenderInitialScreen()
     {
@@ -64,64 +65,90 @@ public class GameRenderer(GameState gameState)
                 DrawPixel(previousFoodPosition.X, previousFoodPosition.Y, ConsoleColor.Black, ' ');
             }
         }
+
+        foreach (var previousWallPosition in _previousWallPositions)
+        {
+            if (gameState.Walls.All(w => w.Position != previousWallPosition) 
+                && !IsPositionOccupied(previousWallPosition)
+                && IsInsideField(previousWallPosition))
+            {
+                DrawPixel(previousWallPosition.X, previousWallPosition.Y, ConsoleColor.Black, ' ');
+            }
+        }
     }
 
     private void DrawGameObjects(bool isPaused = false)
     {
         DrawBorders();
+        DrawAllWalls();
         DrawAllSnake();
         DrawAllFood();
         DrawInfo(isPaused);
     }
+
+    private void DrawAllWalls()
+    {
+        foreach (var wall in gameState.Walls)
+        {
+            DrawPixel(wall.Position.X, wall.Position.Y, ConsoleColor.DarkGray, '▓');
+        }
+    }
+    
     private void DrawBorders()
     {
-        for (int x = 0; x < gameState.FieldWidth; x++)
+        int startX = gameState.MapOffsetX - 1;
+        int startY = gameState.MapOffsetY - 1;
+        int endX = gameState.MapOffsetX + gameState.MapWidth;
+        int endY = gameState.MapOffsetY + gameState.MapHeight;
+        for (int x = startX; x <= endX; x++)
         {
-            DrawPixel(x, 0, ConsoleColor.White, '═');
-            DrawPixel(x, gameState.FieldHeight - 1, ConsoleColor.White, '═');
+            DrawPixel(x, startY, ConsoleColor.White, '═');
+            DrawPixel(x, endY, ConsoleColor.White, '═');
         }
 
-        for (int y = 0; y < gameState.FieldHeight; y++)
+        for (int y = startY; y <= endY; y++)
         {
-            DrawPixel(0, y, ConsoleColor.White, '║');
-            DrawPixel(gameState.FieldWidth - 1, y, ConsoleColor.White, '║');
+            DrawPixel(startX, y, ConsoleColor.White, '║');
+            DrawPixel(endX, y, ConsoleColor.White, '║');
         }
         
-        DrawPixel(0, 0, ConsoleColor.White, '╔');
-        DrawPixel(gameState.FieldWidth - 1, 0, ConsoleColor.White, '╗');
-        DrawPixel(0, gameState.FieldHeight - 1, ConsoleColor.White, '╚');
-        DrawPixel(gameState.FieldWidth - 1, gameState.FieldHeight - 1, ConsoleColor.White, '╝');
+        DrawPixel(startX, startY, ConsoleColor.White, '╔');
+        DrawPixel(endX, startY, ConsoleColor.White, '╗');
+        DrawPixel(startX, endY, ConsoleColor.White, '╚');
+        DrawPixel(endX, endY, ConsoleColor.White, '╝');
     }
 
     private void DrawInfo(bool isPaused = false)
     {
+        int infoStartY = gameState.MapOffsetY + gameState.MapHeight + 1;
         var player1 = gameState.Snakes.FirstOrDefault(s => s.PlayerId == 0);
         var player2 = gameState.Snakes.FirstOrDefault(s => s.PlayerId == 1);
         var isMultiplayer = gameState.Snakes.Count > 1 && player2 != null;
+        string mapInfo = $"Map : {gameState.CurrentMap} | ";
         var info = isMultiplayer 
             ? "Snake game | ESC: exit | P/space: pause | P1: WASD | P2: arrows" 
             : "Snake game | ESC: exit | P/space: pause | Move: WASD";
         var player1Info = $"P1: Length: {player1?.Body.Count ?? 0} | Direction: {player1?.CurrentDirection ?? Direction.None}";
-        var gameInfo = $"Score: {gameState.Score} | Speed: {GetSpeedDescription()}";
+        var gameInfo = mapInfo + $"Score: {gameState.Score} | Speed: {GetSpeedDescription()}";
         var infoX = Math.Max(0, (gameState.FieldWidth - info.Length) / 2);
         var player1X = Math.Max(0, (gameState.FieldWidth - player1Info.Length) / 2);
         var gameInfoX = Math.Max(0, (gameState.FieldWidth - gameInfo.Length) / 2);
-        for (var y = gameState.FieldHeight + 1; y <= gameState.FieldHeight + 7; y++)
+        for (var y = infoStartY + 1; y <= infoStartY + 7; y++)
         {
             ClearLine(y);
         }
-        DrawText(info, infoX, gameState.FieldHeight + 1, ConsoleColor.Gray);
-        DrawText(player1Info, player1X, gameState.FieldHeight + 2, ConsoleColor.Green);
+        DrawText(info, infoX, infoStartY + 1, ConsoleColor.Gray);
+        DrawText(player1Info, player1X, infoStartY + 2, ConsoleColor.Green);
         if (isMultiplayer)
         {
             var player2Info = $"P2: Length: {player2?.Body.Count ?? 0} | Direction: {player2?.CurrentDirection ?? Direction.None}";
             var player2X = Math.Max(0, (gameState.FieldWidth - player2Info.Length) / 2);    
-            DrawText(player2Info, player2X, gameState.FieldHeight + 3, ConsoleColor.Blue);
-            DrawText(gameInfo, gameInfoX, gameState.FieldHeight + 4, ConsoleColor.Cyan);
+            DrawText(player2Info, player2X, infoStartY + 3, ConsoleColor.Blue);
+            DrawText(gameInfo, gameInfoX, infoStartY, ConsoleColor.Cyan);
         }
         else
         {
-            DrawText(gameInfo, gameInfoX, gameState.FieldHeight + 3, ConsoleColor.Cyan);
+            DrawText(gameInfo, gameInfoX, infoStartY + 3, ConsoleColor.Cyan);
         }
 
         string effects1Info = GetActiveEffectsInfo(0);
@@ -129,7 +156,7 @@ public class GameRenderer(GameState gameState)
         {
             effects1Info = "P1 " + effects1Info;
             int effects1X = Math.Max(0, (gameState.FieldWidth - effects1Info.Length) / 2); 
-            DrawText(effects1Info, effects1X, gameState.FieldHeight + (isMultiplayer ? 5 : 4), ConsoleColor.Magenta);
+            DrawText(effects1Info, effects1X, infoStartY + (isMultiplayer ? 5 : 4), ConsoleColor.Magenta);
         }
 
         if (isMultiplayer)
@@ -139,13 +166,13 @@ public class GameRenderer(GameState gameState)
             {
                 effects2Info = "P2 " + effects2Info;
                 int effects2X = Math.Max(0, (gameState.FieldWidth - effects2Info.Length) / 2); 
-                DrawText(effects2Info, effects2X, gameState.FieldHeight + 6, ConsoleColor.Magenta);
+                DrawText(effects2Info, effects2X, infoStartY + 6, ConsoleColor.Magenta);
             }
         }
         if (!isPaused) return;
         const string pauseInfo = "*** PAUSED ***";
         var pauseInfoX = Math.Max(0, (gameState.FieldWidth - pauseInfo.Length) / 2);
-        var pauseInfoY = isMultiplayer ? gameState.FieldHeight + 7 : gameState.FieldHeight + 6;
+        var pauseInfoY = isMultiplayer ? infoStartY + 7 : infoStartY + 6;
         DrawText(pauseInfo, pauseInfoX, pauseInfoY, ConsoleColor.Yellow);
     }
     
@@ -164,6 +191,7 @@ public class GameRenderer(GameState gameState)
 
     private void ClearLine(int y)
     {
+        Console.ResetColor();
         Console.SetCursorPosition(0, y);
         Console.Write(new string(' ', Console.WindowWidth));
         for (var x = 0; x < gameState.FieldWidth; x++)
@@ -247,6 +275,7 @@ public class GameRenderer(GameState gameState)
     {
         _previousSnakePositions = gameState.Snakes.SelectMany(snake => snake.Body).ToList();
         _previousFoodPositions = gameState.Food.Select(food => food.Position).ToList();
+        _previousWallPositions = gameState.Walls.Select(wall => wall.Position).ToList();
     }
 
     private void DrawText(string text, int startX, int y, ConsoleColor color)
@@ -261,10 +290,12 @@ public class GameRenderer(GameState gameState)
     {
         if (x < 0 || y < 0 || x >= Console.WindowWidth || y >= Console.WindowHeight) return;
         if (_previousFrame[x, y] == symbol) return;
+        Console.ResetColor();       
         Console.SetCursorPosition(x, y);
         Console.ForegroundColor = color;
         Console.Write(symbol);
         _previousFrame[x, y] = symbol;
+        Console.ResetColor();
     }
     
     private bool IsPositionOccupied(Point position)
@@ -274,8 +305,8 @@ public class GameRenderer(GameState gameState)
 
     private bool IsInsideField(Point position)
     {
-        return position.X > 0 && position.X < gameState.FieldWidth - 1 && 
-               position.Y > 0 && position.Y < gameState.FieldHeight - 1;
+        return position.X >= gameState.MapOffsetX && position.X < gameState.MapOffsetX + gameState.MapWidth && 
+               position.Y >= gameState.MapOffsetY && position.Y < gameState.MapOffsetY + gameState.MapHeight;
     }
 
 }

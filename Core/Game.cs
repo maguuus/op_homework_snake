@@ -3,7 +3,6 @@ using op_homework_snake_game.Enums;
 using op_homework_snake_game.Input;
 using op_homework_snake_game.Rendering;
 using op_homework_snake_game.UI;
-using SnakeGame.UI;
 
 namespace op_homework_snake_game.Core;
 
@@ -17,10 +16,13 @@ public class Game
     private bool _isPaused;
     private readonly HighscoreManager _highscoreManager;
     private readonly Menu _menu;
-    public Game(HighscoreManager highscoreManager, GameMode gameMode)
+    private readonly string _currentMap;
+    
+    public Game(HighscoreManager highscoreManager, GameMode gameMode, string currentMap)
     {
         _gameMode = gameMode;
-        _gameState = new GameState(_gameMode);
+        _gameState = new GameState(_gameMode, currentMap);
+        _currentMap = currentMap;
         _renderer = new GameRenderer(_gameState);
         _highscoreManager = highscoreManager;
         _menu = new Menu();
@@ -33,7 +35,7 @@ public class Game
         {
             _isRunning = true;
             _isPaused = false;
-            _gameState = new GameState(_gameMode);
+            _gameState = new GameState(_gameMode, _currentMap);
             Console.Clear();
             _renderer = new GameRenderer(_gameState);
             _renderer.RenderInitialScreen();
@@ -273,14 +275,11 @@ public class Game
         
         foreach (var snake in _gameState.Snakes)
         {
-            // if (_gameState.HasEffect(FoodType.Reverse, snake.PlayerId))
-            // {
-                // snake.NextDirection = GetReversedDirection(snake.NextDirection);
-            // }
             snake.UpdateDirection();
         }
         List<Snake> deadSnakes = new List<Snake>();
         bool gameShouldEnd = false;
+        
         foreach (var snake in _gameState.Snakes)
         {
             if (snake.Body.Count == 0)
@@ -307,16 +306,34 @@ public class Game
                     break;
             }
 
-            bool wallCollision = newHead.X <= 0 || newHead.X >= _gameState.FieldWidth - 1 || 
-                                 newHead.Y <= 0 || newHead.Y >= _gameState.FieldHeight - 1;
+            bool wallCollision = _gameState.IsWallCollision(newHead);
             bool selfCollision = snake.Body.Skip(1).Any(segment => segment == newHead);
             bool otherSnakesCollision = _gameState.Snakes.Where(s => s != snake).Any(other => other.Body.Any(segment => segment == newHead));
-            if (wallCollision || selfCollision || otherSnakesCollision)
+            bool hasShield = _gameState.HasEffect(FoodType.Shield, snake.PlayerId);
+            bool shouldDieToWall = wallCollision && !hasShield;
+            
+            if (shouldDieToWall || selfCollision || otherSnakesCollision)
             {
                 deadSnakes.Add(snake);
                 continue;
             }
+            bool outOfBounds = newHead.X <= _gameState.MapOffsetX || newHead.X >= _gameState.MapOffsetX + _gameState.MapWidth - 1 || 
+                               newHead.Y <= _gameState.MapOffsetY || newHead.Y >= _gameState.MapOffsetY + _gameState.MapHeight - 1;
 
+            if (outOfBounds)
+            {
+                if (hasShield)
+                {
+                    newHead = TeleportToOppositeSide(newHead);
+                }
+                else
+                {
+                    deadSnakes.Add(snake);
+                    continue;
+                }
+            }
+            
+            
             FoodType ateFood = _gameState.TryEatFood(newHead, snake.PlayerId);
             snake.Body.Insert(0, newHead);
             if (ateFood == FoodType.None)
@@ -372,5 +389,23 @@ public class Game
         {
             _isRunning = false;
         }
+    }
+
+    private Point TeleportToOppositeSide(Point position)
+    {
+        var x = position.X;
+        var y = position.Y;
+        int left = _gameState.MapOffsetX;
+        int right = left + _gameState.MapWidth - 1;
+        int top = _gameState.MapOffsetY;
+        int bottom = top + _gameState.MapHeight - 1;
+        
+        if (x < left) x = right;
+        else if (x > right) x = left;
+        
+        if (y < top) y = bottom;
+        else if (y > bottom) y = top;
+        
+        return new Point(x, y);
     }
 }

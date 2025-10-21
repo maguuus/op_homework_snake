@@ -12,11 +12,20 @@ public class GameState
     private readonly Queue<InputCommand> _commandQueue = new();
     private readonly ManualResetEvent _newCommandEvent = new(false);
     
+    public List<Wall> Walls { get; private set; } = [];
+    public string CurrentMap {get; private set;} = "arena";
+    
     public List<Snake> Snakes { get; private set;  }
     public List<Food> Food { get; private set; }
     public List<Effect> ActiveEffects { get; } = [];
+    
     public int FieldWidth { get; private set; }
     public int FieldHeight { get; private set; }
+    public int MapWidth { get; private set; }
+    public int MapHeight { get; private set; }
+    public int MapOffsetX { get; private set; }
+    public int MapOffsetY { get; private set; }
+    
     public int Score { get; private set; }
     public GameResult GameResult { get; set; } = GameResult.InProgress;
     public int? WinnerPlayerId { get; set; }
@@ -45,7 +54,7 @@ public class GameState
         }
     }
     
-    public GameState(GameMode gameMode)
+    public GameState(GameMode gameMode, string mapName = "arena")
     {
         _gameMode = gameMode;
         FieldWidth = Math.Max(GameConfig.MinFieldWidth, Console.WindowWidth - GameConfig.FieldWidthBuffer);
@@ -53,24 +62,99 @@ public class GameState
         Snakes = new List<Snake>();
         Food = new List<Food>();
         Score = 0;
+        
+        LoadMap(mapName);
         InitializeGame();
     }
 
+    public void LoadMap(string mapName)
+    {
+        MapWidth = FieldWidth;
+        MapHeight = FieldHeight;
+        Walls.Clear();
+        CurrentMap = mapName;
+        string mapPath = $"Data/Maps/{mapName}.txt";
+        if (!File.Exists(mapPath))
+        {
+            Console.WriteLine($"Map file {mapName} not found, using empty map");
+            MapWidth = 0;
+            MapHeight = 0;
+            return;
+        }
+
+        try
+        {
+            string[] allLines = File.ReadAllLines(mapPath);
+            var lines = allLines.Where(l => !l.TrimStart().StartsWith("/")).ToArray();
+            MapHeight = lines.Length;
+            MapWidth = lines[0].Length;
+            if (MapHeight > FieldHeight - 2 || MapWidth > FieldWidth - 2)
+            {
+                Console.WriteLine($"Map file {mapPath} is too large, using empty map");
+                return;
+            }
+
+            MapOffsetX = (FieldWidth - MapWidth) / 2;
+            MapOffsetY = (FieldHeight - MapHeight) / 2;
+
+            for (int y = 0; y < MapHeight; y++)
+            {
+                for (int x = 0; x < lines[y].Length; x++)
+                {
+                    if (lines[y][x] == '#')
+                        Walls.Add(new Wall(new Point(x + MapOffsetX, y + MapOffsetY)));
+                }
+            }
+            Console.WriteLine($"Loaded map: {mapName} with {Walls.Count} walls");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading map {mapName}: {ex.Message}");
+            MapWidth = 0;
+            MapHeight = 0;
+        }
+    }
+
+    public bool IsWallCollision(Point position)
+    {
+        return Walls.Any(w => w.Position == position);
+    }
+
+    public bool IsPositionFree(Point position)
+    {
+        bool wallCollision = IsWallCollision(position);
+        bool snakeCollision = Snakes.Any(s => s.Body.Contains(position));
+        bool foodCollision = Food.Any(f => f.Position == position);
+        
+        return !(wallCollision ||  snakeCollision || foodCollision);
+    }
+    
     private void InitializeGame()
     {
+        var mapInfo = MapLoader.ParseMapMetadata($"Data/Maps/{CurrentMap}.txt");
+        var starts = mapInfo?.SnakeStartPositions ?? [];
+        
         Snakes.Clear();
         Food.Clear();
+        if (MapWidth < 4 || MapHeight < 4)
+        {
+            Console.WriteLine($"Map file {CurrentMap} is too small, using empty map");
+            MapOffsetX = 1;
+            MapOffsetY = 1;
+            MapWidth = FieldWidth - 2;
+            MapHeight = FieldHeight - 2;
+        }
         var playerSnake = new Snake(0, true)
         {
             CurrentDirection = Direction.Left,
             NextDirection = Direction.Left,
             Color = ConsoleColor.Green
         };
-        int startX = FieldWidth / 2;
-        int startY = FieldHeight / 2;
+        int start1X = starts.Count > 0 ? MapOffsetX + starts[0].X : MapOffsetX + MapWidth / 2 - 5;
+        int start1Y = starts.Count > 0 ? MapOffsetY + starts[0].Y : MapOffsetY + MapHeight / 2;
         for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
         {
-            playerSnake.Body.Add(new Point(startX - 5 + i, startY));
+            playerSnake.Body.Add(new Point(start1X + i, start1Y));
         }
         Snakes.Add(playerSnake);
         if (_gameMode == GameMode.MultiPlayer)
@@ -81,9 +165,11 @@ public class GameState
                 NextDirection = Direction.Right,
                 Color = ConsoleColor.Blue
             };
+            var start2X = starts.Count > 1 ? MapOffsetX + starts[1].X : MapOffsetX + MapWidth / 2 + 5 + GameConfig.InitialSnakeLength;
+            var start2Y = starts.Count > 1 ? MapOffsetY + starts[1].Y : MapOffsetY + MapHeight / 2;
             for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
             {
-                player2Snake.Body.Add(new Point(startX + 5 + GameConfig.InitialSnakeLength - i, startY));
+                player2Snake.Body.Add(new Point(start2X - i, start2Y));
             }
             Snakes.Add(player2Snake);
         }
@@ -110,11 +196,6 @@ public class GameState
             return commands;
         }
     }
-
-    public void SignalNewCommand()
-    {
-        _newCommandEvent.Set();
-    }
     
     public void GenerateFood(int amount)
     {
@@ -122,7 +203,7 @@ public class GameState
         for (int i = 0; i < foodToGenerate; i++)
         {
             Point? foodPosition = FindValidFoodPosition();
-            if (foodPosition != null)
+               if (foodPosition != null)
             {
                 FoodType foodType = GetRandomFood();
                 Food.Add(new Food(foodPosition, foodType));
@@ -137,12 +218,12 @@ public class GameState
         return roll switch
         {
             < 50 => FoodType.Normal,
-            < 51 => FoodType.Bonus,
-            < 52 => FoodType.Speed,
-            < 53 => FoodType.Slow,
-            < 54 => FoodType.Reverse,
-            < 55 => FoodType.Shield,
-            < 80 => FoodType.Double,
+            < 70 => FoodType.Bonus,
+            < 80 => FoodType.Speed,
+            < 85 => FoodType.Slow,
+            < 90 => FoodType.Reverse,
+            < 95 => FoodType.Shield,
+            < 98 => FoodType.Double,
             _ => FoodType.Shrink
         };  
     }
@@ -151,11 +232,12 @@ public class GameState
     {
         Random random = new();
         int attempts = 0;
-        while (attempts < 100)
+        while (attempts < 1000)
         {
-            Point candidate = new Point(random.Next(1, FieldWidth - 1), random.Next(1, FieldHeight - 1));
-            bool collision = Snakes.Any(snake => snake.Body.Contains(candidate)) || Food.Any(f => f.Position == candidate);
-            if (!collision)
+            int x = random.Next(MapOffsetX + 1, MapOffsetX + MapWidth - 1);
+            int y = random.Next(MapOffsetY + 1, MapOffsetY + MapHeight - 1);
+            Point candidate = new Point(x, y);
+            if (IsPositionFree(candidate))
                 return candidate;
             attempts++;
         }
