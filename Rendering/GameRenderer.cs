@@ -106,7 +106,7 @@ public class GameRenderer(GameState gameState)
         var infoX = Math.Max(0, (gameState.FieldWidth - info.Length) / 2);
         var player1X = Math.Max(0, (gameState.FieldWidth - player1Info.Length) / 2);
         var gameInfoX = Math.Max(0, (gameState.FieldWidth - gameInfo.Length) / 2);
-        for (var y = gameState.FieldHeight + 1; y <= gameState.FieldHeight + 5; y++)
+        for (var y = gameState.FieldHeight + 1; y <= gameState.FieldHeight + 7; y++)
         {
             ClearLine(y);
         }
@@ -124,11 +124,42 @@ public class GameRenderer(GameState gameState)
             DrawText(gameInfo, gameInfoX, gameState.FieldHeight + 3, ConsoleColor.Cyan);
         }
 
+        string effects1Info = GetActiveEffectsInfo(0);
+        if (!string.IsNullOrEmpty(effects1Info))
+        {
+            effects1Info = "P1 " + effects1Info;
+            int effects1X = Math.Max(0, (gameState.FieldWidth - effects1Info.Length) / 2); 
+            DrawText(effects1Info, effects1X, gameState.FieldHeight + (isMultiplayer ? 5 : 4), ConsoleColor.Magenta);
+        }
+
+        if (isMultiplayer)
+        {
+            string effects2Info = GetActiveEffectsInfo(1);
+            if (!string.IsNullOrEmpty(effects2Info))
+            {
+                effects2Info = "P2 " + effects2Info;
+                int effects2X = Math.Max(0, (gameState.FieldWidth - effects2Info.Length) / 2); 
+                DrawText(effects2Info, effects2X, gameState.FieldHeight + 6, ConsoleColor.Magenta);
+            }
+        }
         if (!isPaused) return;
         const string pauseInfo = "*** PAUSED ***";
         var pauseInfoX = Math.Max(0, (gameState.FieldWidth - pauseInfo.Length) / 2);
-        var pauseInfoY = isMultiplayer ? gameState.FieldHeight + 5 : gameState.FieldHeight + 4;
+        var pauseInfoY = isMultiplayer ? gameState.FieldHeight + 7 : gameState.FieldHeight + 6;
         DrawText(pauseInfo, pauseInfoX, pauseInfoY, ConsoleColor.Yellow);
+    }
+    
+    private string GetActiveEffectsInfo(int playerId)
+    {
+        var player1Effects = gameState.ActiveEffects
+            .Where(e => e.PlayerId == playerId)
+            .Select(e => $"{e.EffectType} ({e.Duration})") 
+            .ToArray();
+    
+        if (player1Effects.Length != 0)
+            return "Effects: " + string.Join(", ", player1Effects);
+    
+        return string.Empty;
     }
 
     private void ClearLine(int y)
@@ -207,8 +238,8 @@ public class GameRenderer(GameState gameState)
 
     private void DrawFood(Food food)
     {        
-        var symbol = food.Type == FoodType.Normal ? '♦' : '★';
-        ConsoleColor color = food.Type == FoodType.Normal ? ConsoleColor.Red : ConsoleColor.Magenta;
+        var symbol = food.GetSymbol();
+        ConsoleColor color = food.Color;
         DrawPixel(food.Position.X, food.Position.Y, color, symbol);
     }
 

@@ -202,36 +202,37 @@ public class Game
         {
             return false;
         }
-        
+
+        bool isReversed = _gameState.HasEffect(FoodType.Reverse, snake.PlayerId);
         switch (command.Type)
         {
             case InputCommandType.MoveUp:
-                if (snake.CanChangeDirection(Direction.Up))
+                if (snake.CanChangeDirection(Direction.Up, isReversed))
                 {
-                    snake.NextDirection = Direction.Up;
+                    snake.NextDirection = isReversed ? Direction.Down : Direction.Up;
                     return true;
                 }
 
                 break;
             case InputCommandType.MoveDown:
-                if (snake.CanChangeDirection(Direction.Down))
+                if (snake.CanChangeDirection(Direction.Down, isReversed))
                 {
-                    snake.NextDirection = Direction.Down;
+                    snake.NextDirection = isReversed ? Direction.Up : Direction.Down;
                     return true;
                 }
 
                 break;
             case InputCommandType.MoveLeft:
-                if (snake.CanChangeDirection(Direction.Left))
+                if (snake.CanChangeDirection(Direction.Left, isReversed))
                 {
-                    snake.NextDirection = Direction.Left;
+                    snake.NextDirection = isReversed ? Direction.Right : Direction.Left;
                     return true;
                 }
 
                 break;
             case InputCommandType.MoveRight:
-                if (snake.CanChangeDirection(Direction.Right)) {
-                    snake.NextDirection = Direction.Right;
+                if (snake.CanChangeDirection(Direction.Right, isReversed)) {
+                    snake.NextDirection = isReversed ? Direction.Left : Direction.Right;
                     return true;
                 }
                 break;
@@ -246,23 +247,36 @@ public class Game
 
     private int CalculateSleepTime()
     {
-        int snakeLength = _gameState.Snakes.Count != 0 ? _gameState.Snakes.Max(s => s.Body.Count) : 0;
+        var player1Snake = _gameState.Snakes.FirstOrDefault(s => s.PlayerId == 0);
+        if (player1Snake == null) return GameConfig.MinSpeed;
+        int baseSleepTime = GetBaseSleepTime(player1Snake.Body.Count);
         
-        if (snakeLength < 10)
-        {
-            return GameConfig.MinSpeed;
-        }
-        else if (snakeLength > 30)
-        {
-            return GameConfig.MaxSpeed;
-        }
-        return GameConfig.MinSpeed - (snakeLength - 10) * (GameConfig.MinSpeed - GameConfig.MaxSpeed) / 20;
+        if (_gameState.HasEffect(FoodType.Speed, 0))
+            baseSleepTime = (int) (baseSleepTime * 0.6);
+        if (_gameState.HasEffect(FoodType.Slow, 0))
+            baseSleepTime = (int) (baseSleepTime * 1.4);
+        return Math.Max(100, baseSleepTime);
     }
-    
+
+    private int GetBaseSleepTime(int snakeLength)
+    {
+        return snakeLength switch
+        {
+            < 10 => GameConfig.MinSpeed,
+            > 30 => GameConfig.MaxSpeed,
+            _ => GameConfig.MinSpeed - (snakeLength - 10) * (GameConfig.MinSpeed - GameConfig.MaxSpeed) / 20
+        };
+    }
     private void UpdateGame()
     {
+        _gameState.UpdateEffects();
+        
         foreach (var snake in _gameState.Snakes)
         {
+            // if (_gameState.HasEffect(FoodType.Reverse, snake.PlayerId))
+            // {
+                // snake.NextDirection = GetReversedDirection(snake.NextDirection);
+            // }
             snake.UpdateDirection();
         }
         List<Snake> deadSnakes = new List<Snake>();
@@ -303,16 +317,24 @@ public class Game
                 continue;
             }
 
-            bool ateFood = _gameState.TryEatFood(newHead);
+            FoodType ateFood = _gameState.TryEatFood(newHead, snake.PlayerId);
             snake.Body.Insert(0, newHead);
-            if (!ateFood)
+            if (ateFood == FoodType.None)
             {
                 snake.Body.RemoveAt(snake.Body.Count - 1);
             }
             else
             {
                 _gameState.GenerateFood(1);
+                if ((_gameState.ActiveEffects.Count(effect => effect.EffectType == FoodType.Double && effect.PlayerId == snake.PlayerId) == 1 && ateFood != FoodType.Double) || 
+                    (_gameState.ActiveEffects.Count(effect => effect.EffectType == FoodType.Double && effect.PlayerId == snake.PlayerId) > 1))
+                {
+                    var tail = snake.Body[^1];
+                    snake.Body.Add(new Point(tail.X, tail.Y));
+                    _gameState.ActiveEffects.Remove(_gameState.ActiveEffects.First(e => e.EffectType == FoodType.Double));
+                }
             } 
+            
             
         }
 

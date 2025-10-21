@@ -14,12 +14,14 @@ public class GameState
     
     public List<Snake> Snakes { get; private set;  }
     public List<Food> Food { get; private set; }
+    public List<Effect> ActiveEffects { get; } = [];
     public int FieldWidth { get; private set; }
     public int FieldHeight { get; private set; }
     public int Score { get; private set; }
     public GameResult GameResult { get; set; } = GameResult.InProgress;
     public int? WinnerPlayerId { get; set; }
     public int? WinnerLength { get; set; }
+    
     public Snake? PlayerSnake
     {
         get
@@ -60,28 +62,28 @@ public class GameState
         Food.Clear();
         var playerSnake = new Snake(0, true)
         {
-            CurrentDirection = Direction.Right,
-            NextDirection = Direction.Right,
+            CurrentDirection = Direction.Left,
+            NextDirection = Direction.Left,
             Color = ConsoleColor.Green
         };
         int startX = FieldWidth / 2;
         int startY = FieldHeight / 2;
         for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
         {
-            playerSnake.Body.Add(new Point(startX - i, startY));
+            playerSnake.Body.Add(new Point(startX - 5 + i, startY));
         }
         Snakes.Add(playerSnake);
         if (_gameMode == GameMode.MultiPlayer)
         {
             var player2Snake = new Snake(1, true)
             {
-                CurrentDirection = Direction.Up,
-                NextDirection = Direction.Up,
+                CurrentDirection = Direction.Right,
+                NextDirection = Direction.Right,
                 Color = ConsoleColor.Blue
             };
             for (int i = 0; i < GameConfig.InitialSnakeLength; i++)
             {
-                player2Snake.Body.Add(new Point(startX + 5 + i, startY));
+                player2Snake.Body.Add(new Point(startX + 5 + GameConfig.InitialSnakeLength - i, startY));
             }
             Snakes.Add(player2Snake);
         }
@@ -122,9 +124,27 @@ public class GameState
             Point? foodPosition = FindValidFoodPosition();
             if (foodPosition != null)
             {
-                Food.Add(new Food(foodPosition));
+                FoodType foodType = GetRandomFood();
+                Food.Add(new Food(foodPosition, foodType));
             }   
         }
+    }
+
+    private FoodType GetRandomFood()
+    {
+        Random random = new();
+        int roll = random.Next(100);
+        return roll switch
+        {
+            < 50 => FoodType.Normal,
+            < 51 => FoodType.Bonus,
+            < 52 => FoodType.Speed,
+            < 53 => FoodType.Slow,
+            < 54 => FoodType.Reverse,
+            < 55 => FoodType.Shield,
+            < 80 => FoodType.Double,
+            _ => FoodType.Shrink
+        };  
     }
 
     private Point? FindValidFoodPosition()
@@ -143,17 +163,70 @@ public class GameState
         return null;
     }
 
-    public bool TryEatFood(Point position)
+    public FoodType TryEatFood(Point position, int playerId)
     {
         var foodToEat = Food.FirstOrDefault(f => f.Position == position);
 
         if (foodToEat != null)
         {
             Food.Remove(foodToEat);
-            Score++;
-            return true;
+            Score += foodToEat.ScoreValue;
+            if (HasEffect(FoodType.Double, playerId))
+            {
+                Score += foodToEat.ScoreValue;
+            }
+            
+            ApplyFoodEffect(foodToEat.Type, playerId);
+            return foodToEat.Type;
         }
-        return false;
+        return FoodType.None;
         
+    }
+
+    private void ApplyFoodEffect(FoodType foodType, int playerId)
+    {
+        switch (foodType) {
+            case FoodType.Speed:
+                ActiveEffects.Add(new Effect(foodType, 100, playerId));
+                break;
+            case FoodType.Slow:
+                ActiveEffects.Add(new Effect(foodType, 80, playerId));
+                break;
+            case FoodType.Reverse:
+                ActiveEffects.Add(new Effect(foodType, 60, playerId));
+                break;
+            case FoodType.Shield:
+                ActiveEffects.Add(new Effect(foodType, 120, playerId));
+                break;
+            case FoodType.Double:
+                ActiveEffects.Add(new Effect(foodType, 1, playerId));
+                break;
+            case FoodType.Shrink:
+                var snake = Snakes.FirstOrDefault(s => s.PlayerId == playerId);
+                if (snake != null && snake.Body.Count > 2)
+                {
+                    int segmentsToRemove = Math.Min(snake.Body.Count - 2, 4);
+                    snake.Body.RemoveRange(snake.Body.Count - segmentsToRemove, segmentsToRemove);
+                }
+                break;
+        }
+    }
+
+    public void UpdateEffects()
+    {
+        for (int i = ActiveEffects.Count - 1; i >= 0; i--)
+        {
+            if (ActiveEffects[i].EffectType != FoodType.Double)
+                ActiveEffects[i].Duration--;
+            if (ActiveEffects[i].Duration <= 0)
+            {
+                ActiveEffects.RemoveAt(i);
+            }
+        }
+    }
+    
+    public bool HasEffect(FoodType effectType, int playerId)
+    {
+        return ActiveEffects.Any(effect => effect.EffectType == effectType && effect.PlayerId == playerId);
     }
 }

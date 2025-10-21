@@ -61,6 +61,7 @@ namespace op_homework_snake_game
                 Console.SetCursorPosition(0, 0);
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"BADERROR: {ex.Message}");
+                Console.WriteLine($"{ex.StackTrace}");
                 Console.ResetColor();
                 Console.ReadKey();
             }

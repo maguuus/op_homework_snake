@@ -33,10 +33,17 @@ public class Snake(int playerId = 0, bool isPlayer = false)
         }
     }
 
-    public bool CanChangeDirection(Direction direction)
+    public bool CanChangeDirection(Direction direction, bool isReversed = false)
     {
         lock (_directionLock)
         {
+            if (isReversed)
+            {
+                return (direction == Direction.Up && _currentDirection != Direction.Up) ||
+                       (direction == Direction.Down &&  _currentDirection != Direction.Down) ||
+                       (direction == Direction.Right && _currentDirection != Direction.Right) ||
+                       (direction == Direction.Left &&  _currentDirection != Direction.Left); 
+            }
             return (direction == Direction.Up && _currentDirection != Direction.Down) ||
                    (direction == Direction.Down &&  _currentDirection != Direction.Up) ||
                    (direction == Direction.Right && _currentDirection != Direction.Left) ||
